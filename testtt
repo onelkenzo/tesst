@@ -12,7 +12,7 @@ getgenv().AutoRejoinGUI = true
 -- Queue script on teleport (persistence)
 if queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/refs/heads/main/test"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/refs/heads/main/testtt"))()
     ]])
 end
 
