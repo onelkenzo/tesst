@@ -6,7 +6,7 @@
 -- ===== QUEUE ON TELEPORT =====
 if queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/main/test0"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/main/test01.lua"))()
     ]])
 end
 
