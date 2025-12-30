@@ -6,7 +6,7 @@
 -- ===== QUEUE ON TELEPORT =====
 if queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/main/test01.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/main/test02.lua"))()
     ]])
 end
 
@@ -44,25 +44,21 @@ local function Rejoin()
     end)
 end
 
--- ===== DISCONNECT DETECTION =====
-CoreGui.DescendantAdded:Connect(function(v)
-    if not AutoRejoin or getgenv()._RejoinFired then return end
-    if not v:IsA("TextLabel") then return end
+-- SAFE KICK DETECTION (NO LOOP)
+local mt = getrawmetatable(game)
+local old = mt.__namecall
+setreadonly(mt, false)
 
-    local t = string.lower(v.Text)
-    if t:find("kicked")
-    or t:find("disconnected")
-    or t:find("connection")
-    or t:find("error") then
+mt.__namecall = newcclosure(function(self, ...)
+    if getnamecallmethod() == "Kick" and self == player then
         Rejoin()
+        return
     end
+    return old(self, ...)
 end)
 
-player.AncestryChanged:Connect(function(_, parent)
-    if parent == nil then
-        Rejoin()
-    end
-end)
+setreadonly(mt, true)
+
 
 -- ==================================================
 -- GUI
