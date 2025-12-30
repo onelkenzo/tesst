@@ -1,7 +1,7 @@
 -- QUEUE SCRIPT ON TELEPORT (REQUIRED)
 if queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/USER/REPO/main/autorejoin.lua?nocache="..tostring(os.time())))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/refs/heads/main/test0"..tostring(os.time())))()
     ]])
 end
 
