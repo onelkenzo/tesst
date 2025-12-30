@@ -1,20 +1,23 @@
+-- QUEUE SCRIPT ON TELEPORT (REQUIRED)
+if queue_on_teleport then
+    queue_on_teleport([[
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/USER/REPO/main/autorejoin.lua?nocache="..tostring(os.time())))()
+    ]])
+end
+
+
 -- ==============================
 -- AUTO REJOIN GUI (BUNNI)
 -- DEFAULT: ON + PERSISTENT
 -- ==============================
 
 repeat task.wait() until game:IsLoaded()
+if getgenv().AutoRejoinGUI_LOADED then return end
+getgenv().AutoRejoinGUI_LOADED = true
 
--- Prevent duplicate execution
-if getgenv().AutoRejoinGUI then return end
-getgenv().AutoRejoinGUI = true
 
--- Queue script on teleport (persistence)
-if queue_on_teleport then
-    queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/refs/heads/main/testtt"))()
-    ]])
-end
+-- GLOBAL LOCK (survives teleport)
+getgenv()._AutoRejoinLock = getgenv()._AutoRejoinLock or false
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -23,18 +26,43 @@ local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
--- SETTINGS
-local AutoRejoin = true -- DEFAULT ON
-local RejoinDelay = 3
-local Rejoining = false
+local AutoRejoin = true
+local Delay = 3
 
--- REJOIN FUNCTION
+-- UNLOCK after full load (IMPORTANT)
+task.delay(10, function()
+    getgenv()._AutoRejoinLock = false
+end)
+
 local function Rejoin()
-    if Rejoining or not AutoRejoin then return end
-    Rejoining = true
-    task.wait(RejoinDelay)
+    if not AutoRejoin then return end
+    if getgenv()._AutoRejoinLock then return end
+
+    getgenv()._AutoRejoinLock = true
+    task.wait(Delay)
     TeleportService:Teleport(placeId, player)
 end
+
+-- Detect disconnect / kick GUI
+CoreGui.DescendantAdded:Connect(function(v)
+    if v:IsA("TextLabel") then
+        local t = string.lower(v.Text)
+        if t:find("kicked")
+        or t:find("disconnected")
+        or t:find("connection")
+        or t:find("error") then
+            Rejoin()
+        end
+    end
+end)
+
+-- Backup detection
+player.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        Rejoin()
+    end
+end)
+
 
 -- ==============================
 -- GUI
