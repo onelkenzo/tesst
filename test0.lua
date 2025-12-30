@@ -1,24 +1,22 @@
--- QUEUE SCRIPT ON TELEPORT (REQUIRED)
+-- ==================================================
+-- AUTO REJOIN GUI (BUNNI)
+-- ONE-SHOT | LOOP-PROOF | STABLE
+-- ==================================================
+
+-- ===== QUEUE ON TELEPORT =====
 if queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/refs/heads/main/test0"..tostring(os.time())))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/onelkenzo/tesst/main/test0"))()
     ]])
 end
 
-
--- ==============================
--- AUTO REJOIN GUI (BUNNI)
--- DEFAULT: ON + PERSISTENT
--- ==============================
-
 repeat task.wait() until game:IsLoaded()
-if getgenv().AutoRejoinGUI_LOADED then return end
-getgenv().AutoRejoinGUI_LOADED = true
 
+-- ===== SINGLE INSTANCE =====
+if getgenv().AutoRejoinLoaded then return end
+getgenv().AutoRejoinLoaded = true
 
--- GLOBAL LOCK (survives teleport)
-getgenv()._AutoRejoinLock = getgenv()._AutoRejoinLock or false
-
+-- ===== SERVICES =====
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local CoreGui = game:GetService("CoreGui")
@@ -26,51 +24,54 @@ local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
+-- ===== SETTINGS =====
 local AutoRejoin = true
 local Delay = 3
 
--- UNLOCK after full load (IMPORTANT)
-task.delay(10, function()
-    getgenv()._AutoRejoinLock = false
-end)
+-- ===== HARD FUSE (NEVER RESETS) =====
+getgenv()._RejoinFired = false
 
+-- ===== REJOIN FUNCTION =====
 local function Rejoin()
     if not AutoRejoin then return end
-    if getgenv()._AutoRejoinLock then return end
+    if getgenv()._RejoinFired then return end
 
-    getgenv()._AutoRejoinLock = true
-    task.wait(Delay)
-    TeleportService:Teleport(placeId, player)
+    getgenv()._RejoinFired = true
+
+    task.spawn(function()
+        task.wait(Delay)
+        TeleportService:Teleport(placeId, player)
+    end)
 end
 
--- Detect disconnect / kick GUI
+-- ===== DISCONNECT DETECTION =====
 CoreGui.DescendantAdded:Connect(function(v)
-    if v:IsA("TextLabel") then
-        local t = string.lower(v.Text)
-        if t:find("kicked")
-        or t:find("disconnected")
-        or t:find("connection")
-        or t:find("error") then
-            Rejoin()
-        end
-    end
-end)
+    if not AutoRejoin or getgenv()._RejoinFired then return end
+    if not v:IsA("TextLabel") then return end
 
--- Backup detection
-player.AncestryChanged:Connect(function(_, parent)
-    if not parent then
+    local t = string.lower(v.Text)
+    if t:find("kicked")
+    or t:find("disconnected")
+    or t:find("connection")
+    or t:find("error") then
         Rejoin()
     end
 end)
 
+player.AncestryChanged:Connect(function(_, parent)
+    if parent == nil then
+        Rejoin()
+    end
+end)
 
--- ==============================
+-- ==================================================
 -- GUI
--- ==============================
+-- ==================================================
 
-local Gui = Instance.new("ScreenGui", CoreGui)
+local Gui = Instance.new("ScreenGui")
 Gui.Name = "AutoRejoinGUI"
 Gui.ResetOnSpawn = false
+Gui.Parent = CoreGui
 
 local Frame = Instance.new("Frame", Gui)
 Frame.Size = UDim2.fromOffset(230, 140)
@@ -122,28 +123,5 @@ Toggle.MouseButton1Click:Connect(function()
         Toggle.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
         Status.Text = "Status: OFF"
         Status.TextColor3 = Color3.fromRGB(200, 0, 0)
-    end
-end)
-
--- ==============================
--- KICK / DISCONNECT DETECTION
--- ==============================
-
-CoreGui.DescendantAdded:Connect(function(v)
-    if not AutoRejoin then return end
-    if v:IsA("TextLabel") then
-        local t = string.lower(v.Text)
-        if t:find("kicked")
-        or t:find("disconnected")
-        or t:find("connection")
-        or t:find("error") then
-            Rejoin()
-        end
-    end
-end)
-
-player.AncestryChanged:Connect(function(_, parent)
-    if not parent then
-        Rejoin()
     end
 end)
