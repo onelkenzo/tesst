@@ -257,8 +257,7 @@ function UILib:CreateWindow(config)
         if window.Panels then
             for _, panel in pairs(window.Panels) do
                 if panel.Frame and panel.Frame.Visible then
-                    -- DEBUG: Trace sync
-                    print("Syncing panel:", panel.Name) 
+                if panel.Frame and panel.Frame.Visible then
                     panel.Frame.Position = UDim2.new(
                         newPos.X.Scale, newPos.X.Offset + selectorFrame.AbsoluteSize.X + 20,
                         newPos.Y.Scale, newPos.Y.Offset
@@ -268,27 +267,32 @@ function UILib:CreateWindow(config)
         end
     end
 
-    selectorFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            print("DEBUG: InputBegan on SelectorFrame")
-            dragging = true
-            dragStart = input.Position
-            startPos = selectorFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                    print("DEBUG: Drag End")
-                end
-            end)
-        end
-    end)
+    local function enableDrag(frame)
+        frame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = selectorFrame.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+    
+        frame.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+    end
 
-    selectorFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
+    -- Enable drag on both Frame and Header to ensure input is captured
+    selectorHeader.Active = true 
+    enableDrag(selectorFrame)
+    enableDrag(selectorHeader)
 
     local dragConnection = UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
