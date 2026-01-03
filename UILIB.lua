@@ -270,6 +270,7 @@ function UILib:CreateWindow(config)
 
     selectorFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            print("DEBUG: InputBegan on SelectorFrame")
             dragging = true
             dragStart = input.Position
             startPos = selectorFrame.Position
@@ -277,6 +278,7 @@ function UILib:CreateWindow(config)
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
+                    print("DEBUG: Drag End")
                 end
             end)
         end
@@ -290,6 +292,7 @@ function UILib:CreateWindow(config)
 
     local dragConnection = UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
+            -- print("DEBUG: Drag Update loop")
             update(input)
         end
     end)
