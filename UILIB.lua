@@ -203,7 +203,7 @@ function UILib:CreateWindow(config)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
-    selectorFrame.Draggable = false -- using custom logic
+    selectorFrame.Draggable = true -- Match V26 behavior for executor compatibility
     selectorFrame.BackgroundTransparency = 1
     Instance.new("UICorner", selectorFrame).CornerRadius = UDim.new(0, 20)
 
