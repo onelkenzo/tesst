@@ -257,6 +257,8 @@ function UILib:CreateWindow(config)
         if window.Panels then
             for _, panel in pairs(window.Panels) do
                 if panel.Frame and panel.Frame.Visible then
+                    -- DEBUG: Trace sync
+                    -- print("Syncing panel:", panel.Name) 
                     panel.Frame.Position = UDim2.new(
                         newPos.X.Scale, newPos.X.Offset + selectorFrame.AbsoluteSize.X + 20,
                         newPos.Y.Scale, newPos.Y.Offset
