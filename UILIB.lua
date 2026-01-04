@@ -19,6 +19,48 @@ repeat task.wait() until player
 local gui = player:WaitForChild("PlayerGui")
 
 -- =====================================================
+-- METHODS FOR WINDOW (Defined early)
+-- =====================================================
+function UILib:AddMethods(window)
+    -- Window Navigation
+    window.ShowPanel = function(self, panelName)
+        UILib:ShowPanel(self, panelName)
+    end
+    
+    window.HidePanel = function(self, panelName)
+        UILib:HidePanel(self, panelName)
+    end
+
+    window.CreatePanel = function(self, config)
+        return UILib:CreatePanel(self, config)
+    end
+    
+    window.AddToggleKey = function(self, keyCode)
+        UILib:AddToggleKey(self, keyCode)
+    end
+
+    -- Global Helpers accessible via Window
+    window.Notify = function(self, config)
+        return UILib:CreateNotification(config)
+    end
+    
+    window.Confirm = function(self, config)
+        return UILib:CreateConfirmation(config)
+    end
+
+    window.Destroy = function(self)
+        if self.DragConnection then
+            self.DragConnection:Disconnect()
+            self.DragConnection = nil
+        end
+        if self.ScreenGui then
+            self.ScreenGui:Destroy()
+        end
+    end
+end
+
+
+-- =====================================================
 -- COLOR PALETTE
 -- =====================================================
 UILib.Colors = {
@@ -180,7 +222,7 @@ function UILib:CreateWindow(config)
     local screenGui = Instance.new("ScreenGui", gui)
     screenGui.Name = winName
     screenGui.ResetOnSpawn = false
-    screenGui.DisplayOrder = 100
+    screenGui.DisplayOrder = config.DisplayOrder or 10000
     screenGui.Enabled = true
 
     local window = {
@@ -753,6 +795,297 @@ function UILib:CreateTextInput(panel, config)
 end
 
 -- =====================================================
+-- SLIDER
+-- =====================================================
+function UILib:CreateSlider(panel, config)
+    config = config or {}
+    local text = config.Text or "Slider"
+    local min = config.Min or 0
+    local max = config.Max or 100
+    local default = config.Default or min
+    local callback = config.Callback or function() end
+    local y = panel.ContentY
+
+    local label = Instance.new("TextLabel", panel.Frame)
+    label.Size = UDim2.new(1, -40, 0, 20)
+    label.Position = UDim2.fromOffset(30, y)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 14
+    label.TextColor3 = UILib.Colors.TEXT_PRIMARY
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local valueLabel = Instance.new("TextLabel", panel.Frame)
+    valueLabel.Size = UDim2.new(0, 50, 0, 20)
+    valueLabel.Position = UDim2.new(1, -80, 0, y)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(default)
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextSize = 14
+    valueLabel.TextColor3 = UILib.Colors.JPUFF_PINK
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    
+    local sliderBg = Instance.new("Frame", panel.Frame)
+    sliderBg.Size = UDim2.new(1, -60, 0, 8)
+    sliderBg.Position = UDim2.fromOffset(30, y + 25)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    sliderBg.BorderSizePixel = 0
+    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
+    
+    local sliderFill = Instance.new("Frame", sliderBg)
+    sliderFill.Size = UDim2.fromScale((default - min) / (max - min), 1)
+    sliderFill.BackgroundColor3 = UILib.Colors.JPUFF_HOT_PINK
+    sliderFill.BorderSizePixel = 0
+    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0)
+    
+    local sliderKnob = Instance.new("Frame", sliderBg)
+    sliderKnob.Size = UDim2.fromOffset(16, 16)
+    sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+    sliderKnob.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+    sliderKnob.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    sliderKnob.BorderSizePixel = 0
+    Instance.new("UICorner", sliderKnob).CornerRadius = UDim.new(1, 0)
+    
+    local btn = Instance.new("TextButton", sliderBg)
+    btn.Size = UDim2.fromScale(1, 1)
+    btn.BackgroundTransparency = 1
+    btn.Text = ""
+    
+    local dragging = false
+    
+    local function update(input)
+        local pos = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+        local value = math.floor(min + ((max - min) * pos))
+        
+        TweenService:Create(sliderFill, TweenInfo.new(0.05), {Size = UDim2.fromScale(pos, 1)}):Play()
+        TweenService:Create(sliderKnob, TweenInfo.new(0.05), {Position = UDim2.new(pos, 0, 0.5, 0)}):Play()
+        valueLabel.Text = tostring(value)
+        
+        callback(value)
+    end
+    
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            update(input)
+        end
+    end)
+    
+    local UserInputService = game:GetService("UserInputService")
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    panel.ContentY = panel.ContentY + 50
+
+    return {
+        SetValue = function(val)
+            local pos = math.clamp((val - min) / (max - min), 0, 1)
+            TweenService:Create(sliderFill, TweenInfo.new(0.2), {Size = UDim2.fromScale(pos, 1)}):Play()
+            TweenService:Create(sliderKnob, TweenInfo.new(0.2), {Position = UDim2.new(pos, 0, 0.5, 0)}):Play()
+            valueLabel.Text = tostring(val)
+        end
+    }
+end
+
+-- =====================================================
+-- DROPDOWN
+-- =====================================================
+function UILib:CreateDropdown(panel, config)
+    config = config or {}
+    local label = config.Label or "Dropdown"
+    local options = config.Options or {"Option 1", "Option 2", "Option 3"}
+    local callback = config.Callback or function() end
+    local y = panel.ContentY
+    
+    -- Label
+    local labelText = Instance.new("TextLabel", panel.Frame)
+    labelText.Size = UDim2.new(1, -60, 0, 20)
+    labelText.Position = UDim2.fromOffset(30, y)
+    labelText.BackgroundTransparency = 1
+    labelText.Text = label
+    labelText.Font = Enum.Font.GothamMedium
+    labelText.TextSize = 14
+    labelText.TextColor3 = UILib.Colors.TEXT_PRIMARY
+    labelText.TextXAlignment = Enum.TextXAlignment.Left
+    labelText.TextTransparency = 0
+    
+    -- Dropdown button
+    local dropdownBtn = Instance.new("TextButton", panel.Frame)
+    dropdownBtn.Size = UDim2.new(1, -60, 0, 45)
+    dropdownBtn.Position = UDim2.fromOffset(30, y + 25)
+    dropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    dropdownBtn.Text = ""
+    dropdownBtn.BorderSizePixel = 0
+    dropdownBtn.BackgroundTransparency = 0.2
+    Instance.new("UICorner", dropdownBtn).CornerRadius = UDim.new(0, 12)
+    
+    local dropdownStroke = Instance.new("UIStroke", dropdownBtn)
+    dropdownStroke.Color = UILib.Colors.JPUFF_PINK
+    dropdownStroke.Transparency = 0.8
+    
+    -- Selected text
+    local selectedText = Instance.new("TextLabel", dropdownBtn)
+    selectedText.Size = UDim2.new(1, -40, 1, 0)
+    selectedText.Position = UDim2.fromOffset(15, 0)
+    selectedText.BackgroundTransparency = 1
+    selectedText.Text = "Select..."
+    selectedText.Font = Enum.Font.GothamMedium
+    selectedText.TextSize = 15
+    selectedText.TextColor3 = UILib.Colors.TEXT_SECONDARY
+    selectedText.TextXAlignment = Enum.TextXAlignment.Left
+    selectedText.TextTransparency = 0
+    
+    -- Arrow indicator
+    local arrow = Instance.new("TextLabel", dropdownBtn)
+    arrow.Size = UDim2.fromOffset(30, 45)
+    arrow.Position = UDim2.new(1, -35, 0, 0)
+    arrow.BackgroundTransparency = 1
+    arrow.Text = "▼"
+    arrow.Font = Enum.Font.GothamBold
+    arrow.TextSize = 12
+    arrow.TextColor3 = UILib.Colors.JPUFF_PINK
+    arrow.TextXAlignment = Enum.TextXAlignment.Center
+    arrow.TextTransparency = 0
+    
+    -- Options container (hidden by default)
+    local optionsContainer = Instance.new("Frame", panel.Frame)
+    optionsContainer.Size = UDim2.new(1, -60, 0, 0)
+    optionsContainer.Position = UDim2.fromOffset(30, y + 75)
+    optionsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    optionsContainer.BorderSizePixel = 0
+    optionsContainer.Visible = false
+    optionsContainer.ClipsDescendants = true
+    optionsContainer.ZIndex = 100
+    Instance.new("UICorner", optionsContainer).CornerRadius = UDim.new(0, 12)
+    
+    local optionsStroke = Instance.new("UIStroke", optionsContainer)
+    optionsStroke.Color = UILib.Colors.JPUFF_PINK
+    optionsStroke.Transparency = 0.6
+    
+    -- Scrolling frame for options
+    local scrollFrame = Instance.new("ScrollingFrame", optionsContainer)
+    scrollFrame.Size = UDim2.fromScale(1, 1)
+    scrollFrame.Position = UDim2.fromOffset(0, 0)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 4
+    scrollFrame.ScrollBarImageColor3 = UILib.Colors.JPUFF_PINK
+    scrollFrame.ZIndex = 101
+    
+    local listLayout = Instance.new("UIListLayout", scrollFrame)
+    listLayout.FillDirection = Enum.FillDirection.Vertical
+    listLayout.Padding = UDim.new(0, 2)
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    local isOpen = false
+    local selectedOption = nil
+    
+    -- Create option buttons
+    for i, option in ipairs(options) do
+        local optionBtn = Instance.new("TextButton", scrollFrame)
+        optionBtn.Size = UDim2.new(1, -10, 0, 40)
+        optionBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        optionBtn.Text = option
+        optionBtn.Font = Enum.Font.GothamMedium
+        optionBtn.TextSize = 14
+        optionBtn.TextColor3 = UILib.Colors.TEXT_PRIMARY
+        optionBtn.BorderSizePixel = 0
+        optionBtn.BackgroundTransparency = 0.3
+        optionBtn.ZIndex = 102
+        Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 8)
+        
+        -- Hover effect
+        optionBtn.MouseEnter:Connect(function()
+            TweenService:Create(optionBtn, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(60, 60, 70),
+                BackgroundTransparency = 0
+            }):Play()
+        end)
+        
+        optionBtn.MouseLeave:Connect(function()
+            TweenService:Create(optionBtn, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+                BackgroundTransparency = 0.3
+            }):Play()
+        end)
+        
+        -- Click handler
+        optionBtn.MouseButton1Click:Connect(function()
+            selectedOption = option
+            selectedText.Text = option
+            selectedText.TextColor3 = UILib.Colors.TEXT_PRIMARY
+            
+            -- Close dropdown
+            isOpen = false
+            TweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            TweenService:Create(optionsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, -60, 0, 0)
+            }):Play()
+            
+            task.delay(0.3, function()
+                optionsContainer.Visible = false
+            end)
+            
+            -- Execute callback
+            callback(option)
+        end)
+    end
+    
+    -- Update scroll canvas size
+    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+    end)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+    
+    -- Toggle dropdown
+    dropdownBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        
+        if isOpen then
+            optionsContainer.Visible = true
+            local maxHeight = math.min(#options * 42, 200)
+            
+            TweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
+            TweenService:Create(optionsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, -60, 0, maxHeight)
+            }):Play()
+        else
+            TweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            TweenService:Create(optionsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, -60, 0, 0)
+            }):Play()
+            
+            task.delay(0.3, function()
+                optionsContainer.Visible = false
+            end)
+        end
+    end)
+    
+    panel.ContentY = panel.ContentY + 80
+    
+    return {
+        SetValue = function(value)
+            selectedOption = value
+            selectedText.Text = value
+            selectedText.TextColor3 = UILib.Colors.TEXT_PRIMARY
+        end,
+        GetValue = function()
+            return selectedOption
+        end
+    }
+end
+
+-- =====================================================
 -- NOTIFICATION
 -- =====================================================
 function UILib:CreateNotification(config)
@@ -839,45 +1172,6 @@ function UILib:AddToggleKey(window, keyCode)
     end)
 end
 
--- =====================================================
--- METHODS FOR WINDOW
--- =====================================================
-function UILib:AddMethods(window)
-    -- Window Navigation
-    window.ShowPanel = function(self, panelName)
-        UILib:ShowPanel(self, panelName)
-    end
 
-    window.HidePanel = function(self, panelName)
-        UILib:HidePanel(self, panelName)
-    end
-
-    window.CreatePanel = function(self, config)
-        return UILib:CreatePanel(self, config)
-    end
-    
-    window.AddToggleKey = function(self, keyCode)
-        UILib:AddToggleKey(self, keyCode)
-    end
-
-    -- Global Helpers accessible via Window
-    window.Notify = function(self, config)
-        return UILib:CreateNotification(config)
-    end
-    
-    window.Confirm = function(self, config)
-        return UILib:CreateConfirmation(config)
-    end
-
-    window.Destroy = function(self)
-        if self.DragConnection then
-            self.DragConnection:Disconnect()
-            self.DragConnection = nil
-        end
-        if self.ScreenGui then
-            self.ScreenGui:Destroy()
-        end
-    end
-end
 
 return UILib
