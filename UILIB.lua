@@ -235,13 +235,13 @@ function UILib:CreateWindow(config)
 
     -- Create selector frame (left panel)
     local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 375)
+    selectorFrame.Size = UDim2.fromOffset(220, 425)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
     -- Create selector frame (left panel)
     local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 375)
+    selectorFrame.Size = UDim2.fromOffset(220, 425)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
@@ -268,7 +268,7 @@ function UILib:CreateWindow(config)
 
     -- Buttons container
     local selectorButtonsContainer = Instance.new("Frame", selectorFrame)
-    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 315)
+    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 365)
     selectorButtonsContainer.Position = UDim2.fromOffset(10, 55)
     selectorButtonsContainer.BackgroundTransparency = 1
 
