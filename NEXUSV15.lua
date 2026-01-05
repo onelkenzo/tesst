@@ -1437,76 +1437,55 @@ local MiscPanel = Window:CreatePanel({
     DisplayName = "Misc"
 })
 
--- Cyberpsycho Toggle (Instant Cyberpsycho State)
-getgenv().CyberpsychoMode = false
-
-UILib:CreateToggle(MiscPanel, {
-    Label = "Cyberpsycho Mode",
-    Default = false,
-    Callback = function(state)
-        getgenv().CyberpsychoMode = state
+-- Cyberpsycho Button (One-time execution)
+UILib:CreateButton(MiscPanel, {
+    Text = "Cyberpsycho",
+    Color = UILib.Colors.ERROR,
+    Callback = function()
+        local MyChar = LocalPlayer.Character
+        local MyRoot = MyChar and MyChar:FindFirstChild("HumanoidRootPart")
         
-        if state then
-            task.spawn(function()
-                while getgenv().CyberpsychoMode do
-                    local MyChar = LocalPlayer.Character
-                    local MyRoot = MyChar and MyChar:FindFirstChild("HumanoidRootPart")
-                    
-                    if MyRoot then
-                        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
-                        local combatRemote = remotes and remotes:FindFirstChild("Combat") and remotes.Combat:FindFirstChild("NetrunnerHack")
-                        
-                        if combatRemote then
-                            -- 1. Hack EVERYONE in the server
-                            local allTargets = {}
-                            
-                            -- Get from Characters folder
-                            if workspace:FindFirstChild("Characters") then
-                                for _, char in ipairs(workspace.Characters:GetChildren()) do
-                                    if char ~= MyChar and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                                        table.insert(allTargets, char)
-                                    end
-                                end
-                            end
-                            
-                            -- Get from Players
-                            for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-                                if player ~= LocalPlayer and player.Character then
-                                    local char = player.Character
-                                    if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                                        local found = false
-                                        for _, t in ipairs(allTargets) do
-                                            if t == char then found = true break end
-                                        end
-                                        if not found then
-                                            table.insert(allTargets, char)
-                                        end
-                                    end
-                                end
-                            end
-                            
-                            -- Hack all targets with random hacks
-                            local hacks = {"PLACE-MARKER", "CREDIT-LIFT", "BLINDSHOT", "SHORT-CIRCUIT"}
-                            for _, targetChar in ipairs(allTargets) do
-                                local hum = targetChar:FindFirstChild("Humanoid")
-                                if hum and hum.Health > 0 then
-                                    -- Use random hack for each target
-                                    local randomHack = hacks[math.random(1, #hacks)]
-                                    combatRemote:FireServer(randomHack, targetChar)
-                                end
-                            end
-                            
-                            -- 2. Execute SELF-SABOTAGE on yourself (triggers cyberpsycho)
-                            combatRemote:FireServer("SELF-SABOTAGE", MyChar)
+        if MyRoot then
+            local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+            local combatRemote = remotes and remotes:FindFirstChild("Combat") and remotes.Combat:FindFirstChild("NetrunnerHack")
+            
+            if combatRemote then
+                -- Get all targets
+                local allTargets = {}
+                if workspace:FindFirstChild("Characters") then
+                    for _, char in ipairs(workspace.Characters:GetChildren()) do
+                        if char ~= MyChar and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                            table.insert(allTargets, char)
                         end
                     end
-                    
-                    task.wait(0.5) -- Spam every 0.5 seconds
                 end
-            end)
-            UILib:CreateNotification({Text = "Cyberpsycho Mode ACTIVATED! 🔥", Duration = 3, Color = UILib.Colors.ERROR})
+                
+                for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local char = player.Character
+                        if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                            table.insert(allTargets, char)
+                        end
+                    end
+                end
+                
+                -- Hack all targets with random hacks
+                local hacks = {"PLACE-MARKER", "CREDIT-LIFT", "BLINDSHOT", "SHORT-CIRCUIT"}
+                for _, targetChar in ipairs(allTargets) do
+                    local hum = targetChar:FindFirstChild("Humanoid")
+                    if hum and hum.Health > 0 then
+                        local randomHack = hacks[math.random(1, #hacks)]
+                        combatRemote:FireServer(randomHack, targetChar)
+                    end
+                end
+                
+                -- Execute SELF-SABOTAGE on yourself (triggers cyberpsycho)
+                combatRemote:FireServer("SELF-SABOTAGE", MyChar)
+                
+                UILib:CreateNotification({Text = "Cyberpsycho activated! 🔥", Duration = 3, Color = UILib.Colors.ERROR})
+            end
         else
-            UILib:CreateNotification({Text = "Cyberpsycho Mode Disabled", Duration = 2})
+            UILib:CreateNotification({Text = "Character not found!", Duration = 2, Color = UILib.Colors.ERROR})
         end
     end
 })
