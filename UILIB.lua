@@ -1155,6 +1155,7 @@ function UILib:CreateKeybind(panel, config)
     local container = Instance.new("Frame", panel.ScrollingFrame)
     container.Size = UDim2.new(1, -20, 0, 35)
     container.Position = UDim2.fromOffset(10, y)
+    container.BackgroundColor3 = Color3.new(0, 0, 0) -- Transparent black
     container.BackgroundTransparency = 1
     container.BorderSizePixel = 0
     
