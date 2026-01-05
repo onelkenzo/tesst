@@ -78,6 +78,38 @@ UILib.Colors = {
 }
 
 -- =====================================================
+-- KEYBINDING SYSTEM
+-- =====================================================
+UILib.Keybinds = {} -- Storage for all keybinds: {ActionName = {Key = Enum.KeyCode, Callback = function}}
+UILib.KeybindListener = nil -- Global listener connection
+
+-- Helper: Convert KeyCode to readable name
+function UILib:GetKeyName(keyCode)
+    if not keyCode then return "None" end
+    local name = tostring(keyCode):gsub("Enum.KeyCode.", "")
+    return name
+end
+
+-- Helper: Start global keybind listener
+function UILib:StartKeybindListener()
+    if self.KeybindListener then return end -- Already running
+    
+    self.KeybindListener = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end -- Ignore if typing in textbox
+        if self.ListeningForKeybind then return end -- Ignore if changing a keybind
+        
+        for actionName, keybind in pairs(self.Keybinds) do
+            if keybind.Key and input.KeyCode == keybind.Key then
+                if keybind.Callback then
+                    keybind.Callback()
+                end
+            end
+        end
+    end)
+end
+
+
+-- =====================================================
 -- LOADING SCREEN
 -- =====================================================
 function UILib:CreateLoadingScreen(config)
@@ -235,13 +267,7 @@ function UILib:CreateWindow(config)
 
     -- Create selector frame (left panel)
     local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 275)
-    selectorFrame.Position = position
-    selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
-    selectorFrame.Active = true
-    -- Create selector frame (left panel)
-    local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 275)
+    selectorFrame.Size = UDim2.fromOffset(220, 375)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
@@ -268,7 +294,7 @@ function UILib:CreateWindow(config)
 
     -- Buttons container
     local selectorButtonsContainer = Instance.new("Frame", selectorFrame)
-    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 215)
+    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 315)
     selectorButtonsContainer.Position = UDim2.fromOffset(10, 55)
     selectorButtonsContainer.BackgroundTransparency = 1
 
@@ -298,7 +324,6 @@ function UILib:CreateWindow(config)
         -- SYNC ALL VISIBLE PANELS
         if window.Panels then
             for _, panel in pairs(window.Panels) do
-                if panel.Frame and panel.Frame.Visible then
                 if panel.Frame and panel.Frame.Visible then
                     panel.Frame.Position = UDim2.new(
                         newPos.X.Scale, newPos.X.Offset + selectorFrame.AbsoluteSize.X + 20,
@@ -406,6 +431,18 @@ function UILib:CreatePanel(window, config)
     panelDivider.BackgroundTransparency = 1
     Instance.new("UICorner", panelDivider).CornerRadius = UDim.new(1, 0)
 
+    -- Scrolling container for panel content
+    local scrollingFrame = Instance.new("ScrollingFrame", panelFrame)
+    scrollingFrame.Size = UDim2.new(1, 0, 1, -85) -- Full width, height minus header
+    scrollingFrame.Position = UDim2.fromOffset(0, 85)
+    scrollingFrame.BackgroundTransparency = 1
+    scrollingFrame.BorderSizePixel = 0
+    scrollingFrame.ScrollBarThickness = 6
+    scrollingFrame.ScrollBarImageColor3 = UILib.Colors.JPUFF_PINK
+    scrollingFrame.CanvasSize = UDim2.fromOffset(0, 0) -- Will auto-adjust
+    scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    scrollingFrame.ClipsDescendants = true
+
     -- Create selector button
     local btn = Instance.new("TextButton", window.SelectorButtonsContainer)
     btn.Size = UDim2.new(1, 0, 0, 45)
@@ -462,12 +499,17 @@ function UILib:CreatePanel(window, config)
     local panel = {
         Name = name,
         Frame = panelFrame,
+        ScrollingFrame = scrollingFrame,
         Button = btn,
         Arrow = arrow,
         MainText = mainText,
         Color = color,
         Size = size,
-        ContentY = 90, -- Starting Y position for content
+        ContentY = 0, -- Starting Y position for content (relative to scrolling frame)
+        UpdateCanvasSize = function(self)
+            -- Auto-adjust canvas size based on ContentY
+            scrollingFrame.CanvasSize = UDim2.fromOffset(0, math.max(self.ContentY + 20, scrollingFrame.AbsoluteSize.Y or 400))
+        end
     }
 
     -- Panel switching logic
@@ -583,7 +625,7 @@ function UILib:CreateToggle(panel, config)
     local callback = config.Callback or function() end
     local y = panel.ContentY
 
-    local label = Instance.new("TextLabel", panel.Frame)
+    local label = Instance.new("TextLabel", panel.ScrollingFrame)
     label.Size = UDim2.new(1, -150, 0, 45)
     label.Position = UDim2.fromOffset(30, y)
     label.BackgroundTransparency = 1
@@ -595,7 +637,7 @@ function UILib:CreateToggle(panel, config)
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.TextTransparency = 0
 
-    local track = Instance.new("Frame", panel.Frame)
+    local track = Instance.new("Frame", panel.ScrollingFrame)
     track.Size = UDim2.fromOffset(90, 40)
     track.Position = UDim2.new(1, -120, 0, y + 2.5)
     track.BackgroundColor3 = initialState and UILib.Colors.JPUFF_HOT_PINK or UILib.Colors.TOGGLE_OFF
@@ -706,6 +748,7 @@ function UILib:CreateToggle(panel, config)
     button.MouseButton1Click:Connect(toggle)
 
     panel.ContentY = panel.ContentY + 55
+    panel:UpdateCanvasSize()
 
     return {
         Toggle = toggle,
@@ -728,7 +771,7 @@ function UILib:CreateButton(panel, config)
     local callback = config.Callback or function() end
     local y = panel.ContentY
 
-    local btn = Instance.new("TextButton", panel.Frame)
+    local btn = Instance.new("TextButton", panel.ScrollingFrame)
     btn.Size = UDim2.new(1, -60, 0, 45)
     btn.Position = UDim2.fromOffset(30, y)
     btn.BackgroundColor3 = color
@@ -758,6 +801,7 @@ function UILib:CreateButton(panel, config)
     btn.MouseButton1Click:Connect(callback)
 
     panel.ContentY = panel.ContentY + 55
+    panel:UpdateCanvasSize()
 
     return btn
 end
@@ -770,7 +814,7 @@ function UILib:CreateTextInput(panel, config)
     local placeholder = config.Placeholder or "Enter text..."
     local y = panel.ContentY
 
-    local input = Instance.new("TextBox", panel.Frame)
+    local input = Instance.new("TextBox", panel.ScrollingFrame)
     input.Size = UDim2.new(1, -40, 0, 45)
     input.Position = UDim2.fromOffset(20, y)
     input.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -790,6 +834,7 @@ function UILib:CreateTextInput(panel, config)
     stroke.Transparency = 0.8
 
     panel.ContentY = panel.ContentY + 55
+    panel:UpdateCanvasSize()
 
     return input
 end
@@ -806,7 +851,7 @@ function UILib:CreateSlider(panel, config)
     local callback = config.Callback or function() end
     local y = panel.ContentY
 
-    local label = Instance.new("TextLabel", panel.Frame)
+    local label = Instance.new("TextLabel", panel.ScrollingFrame)
     label.Size = UDim2.new(1, -40, 0, 20)
     label.Position = UDim2.fromOffset(30, y)
     label.BackgroundTransparency = 1
@@ -816,7 +861,7 @@ function UILib:CreateSlider(panel, config)
     label.TextColor3 = UILib.Colors.TEXT_PRIMARY
     label.TextXAlignment = Enum.TextXAlignment.Left
     
-    local valueLabel = Instance.new("TextLabel", panel.Frame)
+    local valueLabel = Instance.new("TextLabel", panel.ScrollingFrame)
     valueLabel.Size = UDim2.new(0, 50, 0, 20)
     valueLabel.Position = UDim2.new(1, -80, 0, y)
     valueLabel.BackgroundTransparency = 1
@@ -826,7 +871,7 @@ function UILib:CreateSlider(panel, config)
     valueLabel.TextColor3 = UILib.Colors.JPUFF_PINK
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     
-    local sliderBg = Instance.new("Frame", panel.Frame)
+    local sliderBg = Instance.new("Frame", panel.ScrollingFrame)
     sliderBg.Size = UDim2.new(1, -60, 0, 8)
     sliderBg.Position = UDim2.fromOffset(30, y + 25)
     sliderBg.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -886,6 +931,7 @@ function UILib:CreateSlider(panel, config)
     end)
     
     panel.ContentY = panel.ContentY + 50
+    panel:UpdateCanvasSize()
 
     return {
         SetValue = function(val)
@@ -908,7 +954,7 @@ function UILib:CreateDropdown(panel, config)
     local y = panel.ContentY
     
     -- Label
-    local labelText = Instance.new("TextLabel", panel.Frame)
+    local labelText = Instance.new("TextLabel", panel.ScrollingFrame)
     labelText.Size = UDim2.new(1, -60, 0, 20)
     labelText.Position = UDim2.fromOffset(30, y)
     labelText.BackgroundTransparency = 1
@@ -920,7 +966,7 @@ function UILib:CreateDropdown(panel, config)
     labelText.TextTransparency = 0
     
     -- Dropdown button
-    local dropdownBtn = Instance.new("TextButton", panel.Frame)
+    local dropdownBtn = Instance.new("TextButton", panel.ScrollingFrame)
     dropdownBtn.Size = UDim2.new(1, -60, 0, 45)
     dropdownBtn.Position = UDim2.fromOffset(30, y + 25)
     dropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -958,7 +1004,7 @@ function UILib:CreateDropdown(panel, config)
     arrow.TextTransparency = 0
     
     -- Options container (hidden by default)
-    local optionsContainer = Instance.new("Frame", panel.Frame)
+    local optionsContainer = Instance.new("Frame", panel.ScrollingFrame)
     optionsContainer.Size = UDim2.new(1, -60, 0, 0)
     optionsContainer.Position = UDim2.fromOffset(30, y + 75)
     optionsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
@@ -1072,6 +1118,7 @@ function UILib:CreateDropdown(panel, config)
     end)
     
     panel.ContentY = panel.ContentY + 80
+    panel:UpdateCanvasSize()
     
     return {
         SetValue = function(value)
@@ -1081,6 +1128,139 @@ function UILib:CreateDropdown(panel, config)
         end,
         GetValue = function()
             return selectedOption
+        end
+    }
+end
+
+-- =====================================================
+-- KEYBIND
+-- =====================================================
+function UILib:CreateKeybind(panel, config)
+    config = config or {}
+    local actionName = config.ActionName or "Action"
+    local defaultKey = config.DefaultKey or nil
+    local callback = config.Callback or function() end
+    local y = panel.ContentY
+    
+    -- Start the global listener if not already started
+    self:StartKeybindListener()
+    
+    -- Register keybind
+    self.Keybinds[actionName] = {
+        Key = defaultKey,
+        Callback = callback
+    }
+    
+    -- Container for the keybind row (pink background with rounded corners)
+    local container = Instance.new("Frame", panel.ScrollingFrame)
+    container.Size = UDim2.new(1, -20, 0, 35)
+    container.Position = UDim2.fromOffset(10, y)
+    container.BackgroundColor3 = self.Colors.JPUFF_PINK
+    container.BackgroundTransparency = 0.85 -- Slightly transparent pink
+    container.BorderSizePixel = 0
+    
+    -- Rounded corners
+    local corner = Instance.new("UICorner", container)
+    corner.CornerRadius = UDim.new(0, 8)
+    
+    -- Dark pink outline
+    local stroke = Instance.new("UIStroke", container)
+    stroke.Color = self.Colors.JPUFF_DARK_PINK
+    stroke.Thickness = 2
+    
+    -- Action name label (left side)
+    local label = Instance.new("TextLabel", container)
+    label.Size = UDim2.new(1, -80, 1, 0)
+    label.Position = UDim2.fromOffset(20, 0)
+    label.BackgroundColor3 = self.Colors.BG_DARK
+    label.BackgroundTransparency = 1
+    label.Text = actionName
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 15
+    label.TextColor3 = self.Colors.TEXT_PRIMARY
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    
+    -- Keybind display (right side) - Simple text like panel selector
+    local keybindText = Instance.new("TextLabel", container)
+    keybindText.Size = UDim2.fromOffset(60, 35)
+    keybindText.Position = UDim2.new(1, -70, 0, 0)
+    keybindText.BackgroundColor3 = self.Colors.BG_DARK
+    keybindText.BackgroundTransparency = 1
+    keybindText.Text = self:GetKeyName(defaultKey)
+    keybindText.Font = Enum.Font.GothamBold
+    keybindText.TextSize = 14
+    keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+    keybindText.TextXAlignment = Enum.TextXAlignment.Right
+    keybindText.TextYAlignment = Enum.TextYAlignment.Center
+    
+    -- Invisible button for clicking
+    local clickBtn = Instance.new("TextButton", container)
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundColor3 = self.Colors.BG_DARK
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.ZIndex = 2
+    
+    -- Hover effect
+    local listening = false
+    clickBtn.MouseEnter:Connect(function()
+        if not listening then
+            keybindText.TextColor3 = self.Colors.JPUFF_HOT_PINK
+        end
+    end)
+    
+    clickBtn.MouseLeave:Connect(function()
+        if not listening then
+            keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+        end
+    end)
+    
+    -- Click to rebind
+    clickBtn.MouseButton1Click:Connect(function()
+        if listening then return end
+        listening = true
+        self.ListeningForKeybind = true -- Disable global keybind listener
+        keybindText.Text = "..."
+        keybindText.TextColor3 = self.Colors.JPUFF_PINK
+        
+        -- Wait for key press
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+            
+            connection:Disconnect()
+            listening = false
+            self.ListeningForKeybind = false -- Re-enable global keybind listener
+            
+            -- ESC = unbind
+            if input.KeyCode == Enum.KeyCode.Escape then
+                self.Keybinds[actionName].Key = nil
+                keybindText.Text = "None"
+                keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+            else
+                -- Set new key
+                self.Keybinds[actionName].Key = input.KeyCode
+                keybindText.Text = self:GetKeyName(input.KeyCode)
+                keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+            end
+        end)
+    end)
+    
+    panel.ContentY = panel.ContentY + 40
+    panel:UpdateCanvasSize()
+    
+    return {
+        SetKey = function(keyCode)
+            self.Keybinds[actionName].Key = keyCode
+            keybindText.Text = self:GetKeyName(keyCode)
+        end,
+        GetKey = function()
+            return self.Keybinds[actionName].Key
+        end,
+        Remove = function()
+            self.Keybinds[actionName] = nil
+            container:Destroy()
         end
     }
 end
