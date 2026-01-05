@@ -372,11 +372,73 @@ UILib:CreateButton(UtilsPanel, {
 })
 
 UILib:CreateButton(UtilsPanel, {
+    Text = "Copy Player CFrame",
+    Callback = function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local cf = LocalPlayer.Character.HumanoidRootPart.CFrame
+            local components = {cf:GetComponents()}
+            local str = string.format(
+                "CFrame.new(%.2f, %.2f, %.2f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f)",
+                components[1], components[2], components[3],
+                components[4], components[5], components[6],
+                components[7], components[8], components[9],
+                components[10], components[11], components[12]
+            )
+            setclipboard(str)
+            UILib:CreateNotification({Text = "Copied CFrame (position + orientation)!", Duration = 3})
+        end
+    end
+})
+
+UILib:CreateButton(UtilsPanel, {
     Text = "Rejoin Server",
     Callback = function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
     end
 })
+
+-- Teleports Panel
+local TeleportsPanel = UILib:CreatePanel(Window, {
+    Name = "Teleports",
+    DisplayName = "Teleports"
+})
+
+-- Define teleport locations
+local teleportLocations = {
+    {Name = "Bartender", Position = Vector3.new(-60.30, 375.63, 118.52)},
+    {Name = "Crate Quest", Position = Vector3.new(141.79, 354.63, 107.71)},
+    {Name = "Disable Cameras Quest", Position = Vector3.new(5.68, 367.63, 345.74)},
+    {Name = "Gun Dealer", Position = Vector3.new(174.78, 372.88, 283.32)},
+    {Name = "Insurance Dealer 1", Position = Vector3.new(-42.88, 360.13, 208.93)},
+    {Name = "Insurance Dealer 2", Position = Vector3.new(41.96, 365.88, 374.00)},
+    {Name = "Sell NPC", Position = Vector3.new(-152.36, 361.37, 280.54)},
+    {Name = "Kill Target Quest", Position = Vector3.new(76.42, 388.13, 62.22)},
+    {Name = "Inhaler Dealer", Position = Vector3.new(93.37, 363.88, 214.98)},
+    {Name = "Cyberware Npc", Position = Vector3.new(11.98, 390.48, 108.79)},
+    {Name = "Melee Dealer", Position = Vector3.new(1.92, 337.62, 468.07)},
+}
+
+-- Create a button for each teleport location
+for _, location in ipairs(teleportLocations) do
+    UILib:CreateButton(TeleportsPanel, {
+        Text = location.Name,
+        Callback = function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(location.Position)
+                UILib:CreateNotification({
+                    Text = "Teleported to " .. location.Name,
+                    Duration = 2
+                })
+            else
+                UILib:CreateNotification({
+                    Text = "Character not found!",
+                    Duration = 2,
+                    Color = UILib.Colors.ERROR
+                })
+            end
+        end
+    })
+end
 
 -- Show the first panel by default
 Window:ShowPanel("Main")
