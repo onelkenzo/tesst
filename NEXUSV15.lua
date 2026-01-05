@@ -1917,66 +1917,54 @@ local KeybindsPanel = Window:CreatePanel({
 })
 
 UILib:CreateKeybind(KeybindsPanel, {
-    ActionName = "Toggle Cyberpsycho",
+    ActionName = "Cyberpsycho",
     DefaultKey = Enum.KeyCode.P,
     Callback = function()
-        getgenv().CyberpsychoMode = not getgenv().CyberpsychoMode
+        local MyChar = LocalPlayer.Character
+        local MyRoot = MyChar and MyChar:FindFirstChild("HumanoidRootPart")
         
-        if getgenv().CyberpsychoMode then
-            -- Start Cyberpsycho loop
-            task.spawn(function()
-                while getgenv().CyberpsychoMode do
-                    local MyChar = LocalPlayer.Character
-                    local MyRoot = MyChar and MyChar:FindFirstChild("HumanoidRootPart")
-                    
-                    if MyRoot then
-                        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
-                        local combatRemote = remotes and remotes:FindFirstChild("Combat") and remotes.Combat:FindFirstChild("NetrunnerHack")
-                        
-                        if combatRemote then
-                            -- Get all targets
-                            local allTargets = {}
-                            if workspace:FindFirstChild("Characters") then
-                                for _, char in ipairs(workspace.Characters:GetChildren()) do
-                                    if char ~= MyChar and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                                        table.insert(allTargets, char)
-                                    end
-                                end
-                            end
-                            
-                            for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-                                if player ~= LocalPlayer and player.Character then
-                                    local char = player.Character
-                                    if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                                        table.insert(allTargets, char)
-                                    end
-                                end
-                            end
-                            
-                            -- Hack all targets
-                            local hacks = {"PLACE-MARKER", "CREDIT-LIFT", "BLINDSHOT", "SHORT-CIRCUIT"}
-                            for _, targetChar in ipairs(allTargets) do
-                                local hum = targetChar:FindFirstChild("Humanoid")
-                                if hum and hum.Health > 0 then
-                                    local randomHack = hacks[math.random(1, #hacks)]
-                                    combatRemote:FireServer(randomHack, targetChar)
-                                end
-                            end
-                            
-                            -- Execute SELF-SABOTAGE
-                            combatRemote:FireServer("SELF-SABOTAGE", MyChar)
+        if MyRoot then
+            local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+            local combatRemote = remotes and remotes:FindFirstChild("Combat") and remotes.Combat:FindFirstChild("NetrunnerHack")
+            
+            if combatRemote then
+                -- Get all targets
+                local allTargets = {}
+                if workspace:FindFirstChild("Characters") then
+                    for _, char in ipairs(workspace.Characters:GetChildren()) do
+                        if char ~= MyChar and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                            table.insert(allTargets, char)
                         end
                     end
-                    task.wait(0.5)
                 end
-            end)
+                
+                for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local char = player.Character
+                        if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                            table.insert(allTargets, char)
+                        end
+                    end
+                end
+                
+                -- Hack all targets with random hacks
+                local hacks = {"PLACE-MARKER", "CREDIT-LIFT", "BLINDSHOT", "SHORT-CIRCUIT"}
+                for _, targetChar in ipairs(allTargets) do
+                    local hum = targetChar:FindFirstChild("Humanoid")
+                    if hum and hum.Health > 0 then
+                        local randomHack = hacks[math.random(1, #hacks)]
+                        combatRemote:FireServer(randomHack, targetChar)
+                    end
+                end
+                
+                -- Execute SELF-SABOTAGE on yourself (triggers cyberpsycho)
+                combatRemote:FireServer("SELF-SABOTAGE", MyChar)
+                
+                UILib:CreateNotification({Text = "Cyberpsycho activated! 🔥", Duration = 3, Color = UILib.Colors.ERROR})
+            end
+        else
+            UILib:CreateNotification({Text = "Character not found!", Duration = 2, Color = UILib.Colors.ERROR})
         end
-        
-        UILib:CreateNotification({
-            Text = "Cyberpsycho: " .. (getgenv().CyberpsychoMode and "ON" or "OFF"),
-            Duration = 2,
-            Color = getgenv().CyberpsychoMode and UILib.Colors.ERROR or UILib.Colors.SUCCESS
-        })
     end
 })
 
