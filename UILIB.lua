@@ -235,13 +235,13 @@ function UILib:CreateWindow(config)
 
     -- Create selector frame (left panel)
     local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 425)
+    selectorFrame.Size = UDim2.fromOffset(220, 275)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
     -- Create selector frame (left panel)
     local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 425)
+    selectorFrame.Size = UDim2.fromOffset(220, 275)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
@@ -268,7 +268,7 @@ function UILib:CreateWindow(config)
 
     -- Buttons container
     local selectorButtonsContainer = Instance.new("Frame", selectorFrame)
-    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 365)
+    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 215)
     selectorButtonsContainer.Position = UDim2.fromOffset(10, 55)
     selectorButtonsContainer.BackgroundTransparency = 1
 
@@ -406,18 +406,6 @@ function UILib:CreatePanel(window, config)
     panelDivider.BackgroundTransparency = 1
     Instance.new("UICorner", panelDivider).CornerRadius = UDim.new(1, 0)
 
-    -- Scrolling container for panel content
-    local scrollingFrame = Instance.new("ScrollingFrame", panelFrame)
-    scrollingFrame.Size = UDim2.new(1, 0, 1, -85) -- Full width, height minus header
-    scrollingFrame.Position = UDim2.fromOffset(0, 85)
-    scrollingFrame.BackgroundTransparency = 1
-    scrollingFrame.BorderSizePixel = 0
-    scrollingFrame.ScrollBarThickness = 6
-    scrollingFrame.ScrollBarImageColor3 = UILib.Colors.JPUFF_PINK
-    scrollingFrame.CanvasSize = UDim2.fromOffset(0, 0) -- Will auto-adjust
-    scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    scrollingFrame.ClipsDescendants = true
-
     -- Create selector button
     local btn = Instance.new("TextButton", window.SelectorButtonsContainer)
     btn.Size = UDim2.new(1, 0, 0, 45)
@@ -474,28 +462,12 @@ function UILib:CreatePanel(window, config)
     local panel = {
         Name = name,
         Frame = panelFrame,
-        ScrollingFrame = scrollingFrame,
         Button = btn,
         Arrow = arrow,
         MainText = mainText,
         Color = color,
         Size = size,
-        ContentY = 90, -- Starting Y position for content (relative to scrolling frame)
-        UpdateCanvasSize = function(self)
-            -- Auto-adjust canvas size based on content
-            local maxY = 0
-            for _, child in ipairs(scrollingFrame:GetChildren()) do
-                if child:IsA("GuiObject") then
-                    local childBottom = child.AbsolutePosition.Y + child.AbsoluteSize.Y
-                    local scrollTop = scrollingFrame.AbsolutePosition.Y
-                    local relativeBottom = childBottom - scrollTop
-                    if relativeBottom > maxY then
-                        maxY = relativeBottom
-                    end
-                end
-            end
-            scrollingFrame.CanvasSize = UDim2.fromOffset(0, math.max(maxY + 20, scrollingFrame.AbsoluteSize.Y))
-        end
+        ContentY = 90, -- Starting Y position for content
     }
 
     -- Panel switching logic
@@ -611,7 +583,7 @@ function UILib:CreateToggle(panel, config)
     local callback = config.Callback or function() end
     local y = panel.ContentY
 
-    local label = Instance.new("TextLabel", panel.ScrollingFrame)
+    local label = Instance.new("TextLabel", panel.Frame)
     label.Size = UDim2.new(1, -150, 0, 45)
     label.Position = UDim2.fromOffset(30, y)
     label.BackgroundTransparency = 1
@@ -623,7 +595,7 @@ function UILib:CreateToggle(panel, config)
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.TextTransparency = 0
 
-    local track = Instance.new("Frame", panel.ScrollingFrame)
+    local track = Instance.new("Frame", panel.Frame)
     track.Size = UDim2.fromOffset(90, 40)
     track.Position = UDim2.new(1, -120, 0, y + 2.5)
     track.BackgroundColor3 = initialState and UILib.Colors.JPUFF_HOT_PINK or UILib.Colors.TOGGLE_OFF
@@ -734,7 +706,6 @@ function UILib:CreateToggle(panel, config)
     button.MouseButton1Click:Connect(toggle)
 
     panel.ContentY = panel.ContentY + 55
-    panel:UpdateCanvasSize()
 
     return {
         Toggle = toggle,
@@ -757,7 +728,7 @@ function UILib:CreateButton(panel, config)
     local callback = config.Callback or function() end
     local y = panel.ContentY
 
-    local btn = Instance.new("TextButton", panel.ScrollingFrame)
+    local btn = Instance.new("TextButton", panel.Frame)
     btn.Size = UDim2.new(1, -60, 0, 45)
     btn.Position = UDim2.fromOffset(30, y)
     btn.BackgroundColor3 = color
@@ -787,7 +758,6 @@ function UILib:CreateButton(panel, config)
     btn.MouseButton1Click:Connect(callback)
 
     panel.ContentY = panel.ContentY + 55
-    panel:UpdateCanvasSize()
 
     return btn
 end
@@ -800,7 +770,7 @@ function UILib:CreateTextInput(panel, config)
     local placeholder = config.Placeholder or "Enter text..."
     local y = panel.ContentY
 
-    local input = Instance.new("TextBox", panel.ScrollingFrame)
+    local input = Instance.new("TextBox", panel.Frame)
     input.Size = UDim2.new(1, -40, 0, 45)
     input.Position = UDim2.fromOffset(20, y)
     input.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -820,7 +790,6 @@ function UILib:CreateTextInput(panel, config)
     stroke.Transparency = 0.8
 
     panel.ContentY = panel.ContentY + 55
-    panel:UpdateCanvasSize()
 
     return input
 end
@@ -837,7 +806,7 @@ function UILib:CreateSlider(panel, config)
     local callback = config.Callback or function() end
     local y = panel.ContentY
 
-    local label = Instance.new("TextLabel", panel.ScrollingFrame)
+    local label = Instance.new("TextLabel", panel.Frame)
     label.Size = UDim2.new(1, -40, 0, 20)
     label.Position = UDim2.fromOffset(30, y)
     label.BackgroundTransparency = 1
@@ -847,7 +816,7 @@ function UILib:CreateSlider(panel, config)
     label.TextColor3 = UILib.Colors.TEXT_PRIMARY
     label.TextXAlignment = Enum.TextXAlignment.Left
     
-    local valueLabel = Instance.new("TextLabel", panel.ScrollingFrame)
+    local valueLabel = Instance.new("TextLabel", panel.Frame)
     valueLabel.Size = UDim2.new(0, 50, 0, 20)
     valueLabel.Position = UDim2.new(1, -80, 0, y)
     valueLabel.BackgroundTransparency = 1
@@ -857,7 +826,7 @@ function UILib:CreateSlider(panel, config)
     valueLabel.TextColor3 = UILib.Colors.JPUFF_PINK
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     
-    local sliderBg = Instance.new("Frame", panel.ScrollingFrame)
+    local sliderBg = Instance.new("Frame", panel.Frame)
     sliderBg.Size = UDim2.new(1, -60, 0, 8)
     sliderBg.Position = UDim2.fromOffset(30, y + 25)
     sliderBg.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -917,7 +886,6 @@ function UILib:CreateSlider(panel, config)
     end)
     
     panel.ContentY = panel.ContentY + 50
-    panel:UpdateCanvasSize()
 
     return {
         SetValue = function(val)
@@ -940,7 +908,7 @@ function UILib:CreateDropdown(panel, config)
     local y = panel.ContentY
     
     -- Label
-    local labelText = Instance.new("TextLabel", panel.ScrollingFrame)
+    local labelText = Instance.new("TextLabel", panel.Frame)
     labelText.Size = UDim2.new(1, -60, 0, 20)
     labelText.Position = UDim2.fromOffset(30, y)
     labelText.BackgroundTransparency = 1
@@ -952,7 +920,7 @@ function UILib:CreateDropdown(panel, config)
     labelText.TextTransparency = 0
     
     -- Dropdown button
-    local dropdownBtn = Instance.new("TextButton", panel.ScrollingFrame)
+    local dropdownBtn = Instance.new("TextButton", panel.Frame)
     dropdownBtn.Size = UDim2.new(1, -60, 0, 45)
     dropdownBtn.Position = UDim2.fromOffset(30, y + 25)
     dropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -990,7 +958,7 @@ function UILib:CreateDropdown(panel, config)
     arrow.TextTransparency = 0
     
     -- Options container (hidden by default)
-    local optionsContainer = Instance.new("Frame", panel.ScrollingFrame)
+    local optionsContainer = Instance.new("Frame", panel.Frame)
     optionsContainer.Size = UDim2.new(1, -60, 0, 0)
     optionsContainer.Position = UDim2.fromOffset(30, y + 75)
     optionsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
@@ -1104,7 +1072,6 @@ function UILib:CreateDropdown(panel, config)
     end)
     
     panel.ContentY = panel.ContentY + 80
-    panel:UpdateCanvasSize()
     
     return {
         SetValue = function(value)
