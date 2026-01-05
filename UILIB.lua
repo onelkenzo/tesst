@@ -78,6 +78,37 @@ UILib.Colors = {
 }
 
 -- =====================================================
+-- KEYBINDING SYSTEM
+-- =====================================================
+UILib.Keybinds = {} -- Storage for all keybinds: {ActionName = {Key = Enum.KeyCode, Callback = function}}
+UILib.KeybindListener = nil -- Global listener connection
+
+-- Helper: Convert KeyCode to readable name
+function UILib:GetKeyName(keyCode)
+    if not keyCode then return "None" end
+    local name = tostring(keyCode):gsub("Enum.KeyCode.", "")
+    return name
+end
+
+-- Helper: Start global keybind listener
+function UILib:StartKeybindListener()
+    if self.KeybindListener then return end -- Already running
+    
+    self.KeybindListener = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end -- Ignore if typing in textbox
+        
+        for actionName, keybind in pairs(self.Keybinds) do
+            if keybind.Key and input.KeyCode == keybind.Key then
+                if keybind.Callback then
+                    keybind.Callback()
+                end
+            end
+        end
+    end)
+end
+
+
+-- =====================================================
 -- LOADING SCREEN
 -- =====================================================
 function UILib:CreateLoadingScreen(config)
@@ -1096,6 +1127,101 @@ function UILib:CreateDropdown(panel, config)
         end,
         GetValue = function()
             return selectedOption
+        end
+    }
+end
+
+-- =====================================================
+-- KEYBIND
+-- =====================================================
+function UILib:CreateKeybind(panel, config)
+    config = config or {}
+    local actionName = config.ActionName or "Action"
+    local defaultKey = config.DefaultKey or nil
+    local callback = config.Callback or function() end
+    local y = panel.ContentY
+    
+    -- Start the global listener if not already started
+    self:StartKeybindListener()
+    
+    -- Register keybind
+    self.Keybinds[actionName] = {
+        Key = defaultKey,
+        Callback = callback
+    }
+    
+    -- Label
+    local label = Instance.new("TextLabel", panel.ScrollingFrame)
+    label.Size = UDim2.new(1, -200, 0, 40)
+    label.Position = UDim2.fromOffset(30, y)
+    label.BackgroundTransparency = 1
+    label.Text = actionName
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 15
+    label.TextColor3 = self.Colors.TEXT_PRIMARY
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    
+    -- Keybind button (shows current key)
+    local keybindBtn = Instance.new("TextButton", panel.ScrollingFrame)
+    keybindBtn.Size = UDim2.fromOffset(120, 30)
+    keybindBtn.Position = UDim2.new(1, -140, 0, y + 5)
+    keybindBtn.BackgroundColor3 = self.Colors.BG_CARD
+    keybindBtn.Text = self:GetKeyName(defaultKey)
+    keybindBtn.Font = Enum.Font.GothamBold
+    keybindBtn.TextSize = 13
+    keybindBtn.TextColor3 = self.Colors.JPUFF_HOT_PINK
+    Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 6)
+    
+    local keybindStroke = Instance.new("UIStroke", keybindBtn)
+    keybindStroke.Color = self.Colors.JPUFF_PINK
+    keybindStroke.Thickness = 1
+    
+    -- Click to rebind
+    local listening = false
+    keybindBtn.MouseButton1Click:Connect(function()
+        if listening then return end
+        listening = true
+        keybindBtn.Text = "Press key..."
+        keybindBtn.TextColor3 = self.Colors.WARNING
+        
+        -- Wait for key press
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+            
+            connection:Disconnect()
+            listening = false
+            
+            -- ESC = unbind
+            if input.KeyCode == Enum.KeyCode.Escape then
+                self.Keybinds[actionName].Key = nil
+                keybindBtn.Text = "None"
+                keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY
+            else
+                -- Set new key
+                self.Keybinds[actionName].Key = input.KeyCode
+                keybindBtn.Text = self:GetKeyName(input.KeyCode)
+                keybindBtn.TextColor3 = self.Colors.JPUFF_HOT_PINK
+            end
+        end)
+    end)
+    
+    panel.ContentY = panel.ContentY + 50
+    panel:UpdateCanvasSize()
+    
+    return {
+        SetKey = function(keyCode)
+            self.Keybinds[actionName].Key = keyCode
+            keybindBtn.Text = self:GetKeyName(keyCode)
+        end,
+        GetKey = function()
+            return self.Keybinds[actionName].Key
+        end,
+        Remove = function()
+            self.Keybinds[actionName] = nil
+            label:Destroy()
+            keybindBtn:Destroy()
         end
     }
 end
