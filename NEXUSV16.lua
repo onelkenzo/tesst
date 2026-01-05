@@ -1529,6 +1529,60 @@ UILib:CreateButton(MiscPanel, {
     end
 })
 
+-- Disable Cyberpsycho VFX Toggle
+getgenv().DisableCyberpsychoVFX = false
+
+UILib:CreateToggle(MiscPanel, {
+    Label = "Disable Cyberpsycho VFX",
+    Default = false,
+    Callback = function(state)
+        getgenv().DisableCyberpsychoVFX = state
+        
+        if state then
+            -- Hook and disable the cutscene animation
+            task.spawn(function()
+                local ReplicatedStorage = game:GetService("ReplicatedStorage")
+                local cutsceneFramework = ReplicatedStorage:FindFirstChild("ReplicateClient")
+                
+                if cutsceneFramework and cutsceneFramework:FindFirstChild("CutsceneFramework") then
+                    -- Disable by making the Initialize function do nothing
+                    local oldRequire = require
+                    require = function(module)
+                        if module.Name == "CutsceneFramework" then
+                            return {
+                                Initialize = function() 
+                                    return {
+                                        Play = function() end,
+                                        GetAnimationTrack = function() return {Length = 0, GetMarkerReachedSignal = function() return {Once = function() end} end} end
+                                    }
+                                end
+                            }
+                        end
+                        return oldRequire(module)
+                    end
+                end
+                
+                -- Also disable viewport afterimages
+                local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+                task.spawn(function()
+                    while getgenv().DisableCyberpsychoVFX do
+                        for _, viewport in pairs(playerGui.Main:GetChildren()) do
+                            if viewport.Name == "Afterimage" and viewport:IsA("ViewportFrame") then
+                                viewport:Destroy()
+                            end
+                        end
+                        task.wait(0.1)
+                    end
+                end)
+            end)
+            
+            UILib:CreateNotification({Text = "Cyberpsycho VFX Disabled 🚫", Duration = 2})
+        else
+            UILib:CreateNotification({Text = "Cyberpsycho VFX Enabled", Duration = 2})
+        end
+    end
+})
+
 -- ========================================
 -- Exploits Panel (keeping original)
 -- ========================================
