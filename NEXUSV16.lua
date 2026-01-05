@@ -957,20 +957,8 @@ local function PerformAutoSell()
                     
                     UILib:CreateNotification({Text = "Selling: " .. (btn.Text or "Unknown"), Duration = 1})
                     
-                    -- Explicit Click (firesignal is best for Synapse/Krn/etc)
-                    if getgenv and getgenv().firesignal then
-                         pcall(function() getgenv().firesignal(btn.MouseButton1Click) end)
-                         pcall(function() getgenv().firesignal(btn.Activated) end)
-                    end
-                    
-                    -- Physical Click Backup
-                    local absPos = btn.AbsolutePosition
-                    local absSize = btn.AbsoluteSize
-                    local cx = absPos.X + absSize.X/2
-                    local cy = absPos.Y + absSize.Y/2
-                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(cx, cy, 0, true, game, 1)
-                    task.wait(0.05)
-                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+                    -- Use clickGui function (already defined earlier)
+                    clickGui(btn)
                     
                     sellCount = sellCount + 1
                     foundSell = true
