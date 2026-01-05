@@ -1150,10 +1150,16 @@ function UILib:CreateKeybind(panel, config)
         Callback = callback
     }
     
-    -- Label
-    local label = Instance.new("TextLabel", panel.ScrollingFrame)
-    label.Size = UDim2.new(1, -200, 0, 40)
-    label.Position = UDim2.fromOffset(30, y)
+    -- Container for the keybind row (like panel selector button)
+    local container = Instance.new("Frame", panel.ScrollingFrame)
+    container.Size = UDim2.new(1, -20, 0, 35)
+    container.Position = UDim2.fromOffset(10, y)
+    container.BackgroundTransparency = 1
+    
+    -- Action name label (left side)
+    local label = Instance.new("TextLabel", container)
+    label.Size = UDim2.new(1, -80, 1, 0)
+    label.Position = UDim2.fromOffset(20, 0)
     label.BackgroundTransparency = 1
     label.Text = actionName
     label.Font = Enum.Font.GothamMedium
@@ -1162,36 +1168,45 @@ function UILib:CreateKeybind(panel, config)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     
-    -- Keybind button (shows current key) - Cleaner text-only design
-    local keybindBtn = Instance.new("TextButton", panel.ScrollingFrame)
-    keybindBtn.Size = UDim2.fromOffset(120, 30)
-    keybindBtn.Position = UDim2.new(1, -140, 0, y + 5)
-    keybindBtn.BackgroundTransparency = 1 -- Transparent background for clean look
-    keybindBtn.Text = self:GetKeyName(defaultKey)
-    keybindBtn.Font = Enum.Font.GothamBold
-    keybindBtn.TextSize = 14
-    keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY
+    -- Keybind display (right side) - Simple text like panel selector
+    local keybindText = Instance.new("TextLabel", container)
+    keybindText.Size = UDim2.fromOffset(60, 35)
+    keybindText.Position = UDim2.new(1, -70, 0, 0)
+    keybindText.BackgroundTransparency = 1
+    keybindText.Text = self:GetKeyName(defaultKey)
+    keybindText.Font = Enum.Font.GothamBold
+    keybindText.TextSize = 14
+    keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+    keybindText.TextXAlignment = Enum.TextXAlignment.Right
+    keybindText.TextYAlignment = Enum.TextYAlignment.Center
     
-    -- Hover glow effect
-    keybindBtn.MouseEnter:Connect(function()
+    -- Invisible button for clicking
+    local clickBtn = Instance.new("TextButton", container)
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.ZIndex = 2
+    
+    -- Hover effect
+    local listening = false
+    clickBtn.MouseEnter:Connect(function()
         if not listening then
-            keybindBtn.TextColor3 = self.Colors.JPUFF_HOT_PINK
+            keybindText.TextColor3 = self.Colors.JPUFF_HOT_PINK
         end
     end)
     
-    keybindBtn.MouseLeave:Connect(function()
+    clickBtn.MouseLeave:Connect(function()
         if not listening then
-            keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY
+            keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
         end
     end)
     
     -- Click to rebind
-    local listening = false
-    keybindBtn.MouseButton1Click:Connect(function()
+    clickBtn.MouseButton1Click:Connect(function()
         if listening then return end
         listening = true
-        keybindBtn.Text = "Press key..."
-        keybindBtn.TextColor3 = self.Colors.JPUFF_PINK -- Pink when listening
+        keybindText.Text = "..."
+        keybindText.TextColor3 = self.Colors.JPUFF_PINK
         
         -- Wait for key press
         local connection
@@ -1204,32 +1219,31 @@ function UILib:CreateKeybind(panel, config)
             -- ESC = unbind
             if input.KeyCode == Enum.KeyCode.Escape then
                 self.Keybinds[actionName].Key = nil
-                keybindBtn.Text = "None"
-                keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY
+                keybindText.Text = "None"
+                keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
             else
                 -- Set new key
                 self.Keybinds[actionName].Key = input.KeyCode
-                keybindBtn.Text = self:GetKeyName(input.KeyCode)
-                keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY -- Back to default
+                keybindText.Text = self:GetKeyName(input.KeyCode)
+                keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
             end
         end)
     end)
     
-    panel.ContentY = panel.ContentY + 50
+    panel.ContentY = panel.ContentY + 40
     panel:UpdateCanvasSize()
     
     return {
         SetKey = function(keyCode)
             self.Keybinds[actionName].Key = keyCode
-            keybindBtn.Text = self:GetKeyName(keyCode)
+            keybindText.Text = self:GetKeyName(keyCode)
         end,
         GetKey = function()
             return self.Keybinds[actionName].Key
         end,
         Remove = function()
             self.Keybinds[actionName] = nil
-            label:Destroy()
-            keybindBtn:Destroy()
+            container:Destroy()
         end
     }
 end
