@@ -1151,13 +1151,22 @@ function UILib:CreateKeybind(panel, config)
         Callback = callback
     }
     
-    -- Container for the keybind row (matches panel background)
+    -- Container for the keybind row (pink background with rounded corners)
     local container = Instance.new("Frame", panel.ScrollingFrame)
     container.Size = UDim2.new(1, -20, 0, 35)
     container.Position = UDim2.fromOffset(10, y)
-    container.BackgroundColor3 = self.Colors.BG_DARK
-    container.BackgroundTransparency = 1
+    container.BackgroundColor3 = self.Colors.JPUFF_PINK
+    container.BackgroundTransparency = 0.85 -- Slightly transparent pink
     container.BorderSizePixel = 0
+    
+    -- Rounded corners
+    local corner = Instance.new("UICorner", container)
+    corner.CornerRadius = UDim.new(0, 8)
+    
+    -- Dark pink outline
+    local stroke = Instance.new("UIStroke", container)
+    stroke.Color = self.Colors.JPUFF_DARK_PINK
+    stroke.Thickness = 2
     
     -- Action name label (left side)
     local label = Instance.new("TextLabel", container)
