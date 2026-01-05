@@ -1162,20 +1162,28 @@ function UILib:CreateKeybind(panel, config)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     
-    -- Keybind button (shows current key)
+    -- Keybind button (shows current key) - Cleaner text-only design
     local keybindBtn = Instance.new("TextButton", panel.ScrollingFrame)
     keybindBtn.Size = UDim2.fromOffset(120, 30)
     keybindBtn.Position = UDim2.new(1, -140, 0, y + 5)
-    keybindBtn.BackgroundColor3 = self.Colors.BG_CARD
+    keybindBtn.BackgroundTransparency = 1 -- Transparent background for clean look
     keybindBtn.Text = self:GetKeyName(defaultKey)
     keybindBtn.Font = Enum.Font.GothamBold
-    keybindBtn.TextSize = 13
-    keybindBtn.TextColor3 = self.Colors.JPUFF_HOT_PINK
-    Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 6)
+    keybindBtn.TextSize = 14
+    keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY
     
-    local keybindStroke = Instance.new("UIStroke", keybindBtn)
-    keybindStroke.Color = self.Colors.JPUFF_PINK
-    keybindStroke.Thickness = 1
+    -- Hover glow effect
+    keybindBtn.MouseEnter:Connect(function()
+        if not listening then
+            keybindBtn.TextColor3 = self.Colors.JPUFF_HOT_PINK
+        end
+    end)
+    
+    keybindBtn.MouseLeave:Connect(function()
+        if not listening then
+            keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY
+        end
+    end)
     
     -- Click to rebind
     local listening = false
@@ -1183,7 +1191,7 @@ function UILib:CreateKeybind(panel, config)
         if listening then return end
         listening = true
         keybindBtn.Text = "Press key..."
-        keybindBtn.TextColor3 = self.Colors.WARNING
+        keybindBtn.TextColor3 = self.Colors.JPUFF_PINK -- Pink when listening
         
         -- Wait for key press
         local connection
@@ -1202,7 +1210,7 @@ function UILib:CreateKeybind(panel, config)
                 -- Set new key
                 self.Keybinds[actionName].Key = input.KeyCode
                 keybindBtn.Text = self:GetKeyName(input.KeyCode)
-                keybindBtn.TextColor3 = self.Colors.JPUFF_HOT_PINK
+                keybindBtn.TextColor3 = self.Colors.TEXT_SECONDARY -- Back to default
             end
         end)
     end)
