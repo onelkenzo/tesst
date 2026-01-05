@@ -473,7 +473,7 @@ function UILib:CreatePanel(window, config)
         MainText = mainText,
         Color = color,
         Size = size,
-        ContentY = 10, -- Starting Y position for content (relative to scrolling frame)
+        ContentY = 0, -- Starting Y position for content (relative to scrolling frame)
         UpdateCanvasSize = function(self)
             -- Auto-adjust canvas size based on ContentY
             scrollingFrame.CanvasSize = UDim2.fromOffset(0, math.max(self.ContentY + 20, scrollingFrame.AbsoluteSize.Y or 400))
