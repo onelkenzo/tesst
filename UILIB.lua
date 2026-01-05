@@ -1163,6 +1163,7 @@ function UILib:CreateKeybind(panel, config)
     local label = Instance.new("TextLabel", container)
     label.Size = UDim2.new(1, -80, 1, 0)
     label.Position = UDim2.fromOffset(20, 0)
+    label.BackgroundColor3 = Color3.new(0, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = actionName
     label.Font = Enum.Font.GothamMedium
@@ -1175,6 +1176,7 @@ function UILib:CreateKeybind(panel, config)
     local keybindText = Instance.new("TextLabel", container)
     keybindText.Size = UDim2.fromOffset(60, 35)
     keybindText.Position = UDim2.new(1, -70, 0, 0)
+    keybindText.BackgroundColor3 = Color3.new(0, 0, 0)
     keybindText.BackgroundTransparency = 1
     keybindText.Text = self:GetKeyName(defaultKey)
     keybindText.Font = Enum.Font.GothamBold
@@ -1186,6 +1188,7 @@ function UILib:CreateKeybind(panel, config)
     -- Invisible button for clicking
     local clickBtn = Instance.new("TextButton", container)
     clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundColor3 = Color3.new(0, 0, 0)
     clickBtn.BackgroundTransparency = 1
     clickBtn.Text = ""
     clickBtn.ZIndex = 2
