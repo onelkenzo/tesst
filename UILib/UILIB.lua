@@ -19,6 +19,48 @@ repeat task.wait() until player
 local gui = player:WaitForChild("PlayerGui")
 
 -- =====================================================
+-- METHODS FOR WINDOW (Defined early)
+-- =====================================================
+function UILib:AddMethods(window)
+    -- Window Navigation
+    window.ShowPanel = function(self, panelName)
+        UILib:ShowPanel(self, panelName)
+    end
+    
+    window.HidePanel = function(self, panelName)
+        UILib:HidePanel(self, panelName)
+    end
+
+    window.CreatePanel = function(self, config)
+        return UILib:CreatePanel(self, config)
+    end
+    
+    window.AddToggleKey = function(self, keyCode)
+        UILib:AddToggleKey(self, keyCode)
+    end
+
+    -- Global Helpers accessible via Window
+    window.Notify = function(self, config)
+        return UILib:CreateNotification(config)
+    end
+    
+    window.Confirm = function(self, config)
+        return UILib:CreateConfirmation(config)
+    end
+
+    window.Destroy = function(self)
+        if self.DragConnection then
+            self.DragConnection:Disconnect()
+            self.DragConnection = nil
+        end
+        if self.ScreenGui then
+            self.ScreenGui:Destroy()
+        end
+    end
+end
+
+
+-- =====================================================
 -- COLOR PALETTE
 -- =====================================================
 UILib.Colors = {
@@ -44,7 +86,7 @@ function UILib:CreateLoadingScreen(config)
     local accentColor = config.AccentColor or self.Colors.JPUFF_HOT_PINK
     local duration = config.Duration or 2.5
     local onComplete = config.OnComplete or function() end
-    
+
     -- Safety watchdog
     task.spawn(function()
         task.wait(duration + 5)
@@ -53,19 +95,19 @@ function UILib:CreateLoadingScreen(config)
         local stuckLoading = gui:FindFirstChild("UILibLoadingScreen")
         if stuckLoading then stuckLoading:Destroy() end
     end)
-    
+
     -- Create loading screen GUI
     local loadingGui = Instance.new("ScreenGui", gui)
     loadingGui.Name = "UILibLoadingScreen"
     loadingGui.ResetOnSpawn = false
     loadingGui.IgnoreGuiInset = true
     loadingGui.DisplayOrder = 999
-    
+
     -- Blur effect
     local blur = Instance.new("BlurEffect", Lighting)
     blur.Name = "UILibLoadBlur"
     blur.Size = 0
-    
+
     -- Full screen background
     local loadingBg = Instance.new("Frame", loadingGui)
     loadingBg.Size = UDim2.fromScale(1, 1)
@@ -73,7 +115,7 @@ function UILib:CreateLoadingScreen(config)
     loadingBg.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     loadingBg.BackgroundTransparency = 0.3
     loadingBg.BorderSizePixel = 0
-    
+
     -- Center container
     local loadingFrame = Instance.new("Frame", loadingBg)
     loadingFrame.Size = UDim2.fromOffset(400, 200)
@@ -82,7 +124,7 @@ function UILib:CreateLoadingScreen(config)
     loadingFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     loadingFrame.BorderSizePixel = 0
     Instance.new("UICorner", loadingFrame).CornerRadius = UDim.new(0, 15)
-    
+
     -- Loading text
     local loadingText = Instance.new("TextLabel", loadingFrame)
     loadingText.Size = UDim2.new(1, 0, 0, 50)
@@ -94,7 +136,7 @@ function UILib:CreateLoadingScreen(config)
     loadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
     loadingText.TextTransparency = 0
     loadingText.RichText = true
-    
+
     -- Animated dots
     local dots = ""
     task.spawn(function()
@@ -106,7 +148,7 @@ function UILib:CreateLoadingScreen(config)
             task.wait(0.5)
         end
     end)
-    
+
     -- Progress bar background
     local progressBg = Instance.new("Frame", loadingFrame)
     progressBg.Size = UDim2.new(0.8, 0, 0, 6)
@@ -115,17 +157,17 @@ function UILib:CreateLoadingScreen(config)
     progressBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     progressBg.BorderSizePixel = 0
     Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
-    
+
     -- Progress bar fill
     local progressFill = Instance.new("Frame", progressBg)
     progressFill.Size = UDim2.fromScale(0, 1)
     progressFill.BackgroundColor3 = accentColor
     progressFill.BorderSizePixel = 0
     Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
-    
+
     -- Animate blur in
     TweenService:Create(blur, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 24}):Play()
-    
+
     -- Animate progress bar
     local progressTween = TweenService:Create(
         progressFill,
@@ -133,28 +175,28 @@ function UILib:CreateLoadingScreen(config)
         {Size = UDim2.fromScale(1, 1)}
     )
     progressTween:Play()
-    
+
     -- Wait and fade out
     task.spawn(function()
         task.wait(duration)
-        
+
         loadingText.Text = string.format('<font color="rgb(%d,%d,%d)">%s Loaded!</font>', 
             accentColor.R * 255, accentColor.G * 255, accentColor.B * 255, title)
         task.wait(0.5)
-        
+
         -- Fade out
         TweenService:Create(loadingBg, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
         TweenService:Create(loadingText, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1}):Play()
         TweenService:Create(loadingFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
         TweenService:Create(blur, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = 0}):Play()
-        
+
         task.wait(0.9)
         if blur then blur:Destroy() end
         if loadingGui then loadingGui:Destroy() end
-        
+
         onComplete()
     end)
-    
+
     return {
         Gui = loadingGui,
         Blur = blur,
@@ -174,14 +216,15 @@ function UILib:CreateWindow(config)
     local accentColor = config.AccentColor or self.Colors.JPUFF_HOT_PINK
     local size = config.Size or UDim2.fromOffset(600, 400)
     local position = config.Position or UDim2.fromOffset(50, 50)
-    
+    local winName = config.Name or "UILibWindow"
+
     -- Create ScreenGui
     local screenGui = Instance.new("ScreenGui", gui)
-    screenGui.Name = config.Name or "UILibWindow"
+    screenGui.Name = winName
     screenGui.ResetOnSpawn = false
-    screenGui.DisplayOrder = 100
+    screenGui.DisplayOrder = config.DisplayOrder or 10000
     screenGui.Enabled = true
-    
+
     local window = {
         ScreenGui = screenGui,
         Panels = {},
@@ -189,22 +232,28 @@ function UILib:CreateWindow(config)
         AccentColor = accentColor,
         SelectorFrame = nil,
     }
-    
+
     -- Create selector frame (left panel)
     local selectorFrame = Instance.new("Frame", screenGui)
-    selectorFrame.Size = UDim2.fromOffset(220, 275)
+    selectorFrame.Size = UDim2.fromOffset(220, 425)
     selectorFrame.Position = position
     selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
     selectorFrame.Active = true
-    selectorFrame.Draggable = true
+    -- Create selector frame (left panel)
+    local selectorFrame = Instance.new("Frame", screenGui)
+    selectorFrame.Size = UDim2.fromOffset(220, 425)
+    selectorFrame.Position = position
+    selectorFrame.BackgroundColor3 = self.Colors.BG_DARK
+    selectorFrame.Active = true
+    selectorFrame.Draggable = true -- Match V26 behavior for executor compatibility
     selectorFrame.BackgroundTransparency = 1
     Instance.new("UICorner", selectorFrame).CornerRadius = UDim.new(0, 20)
-    
+
     local selectorStroke = Instance.new("UIStroke", selectorFrame)
     selectorStroke.Color = accentColor
     selectorStroke.Thickness = 2
     selectorStroke.Transparency = 1
-    
+
     -- Selector header
     local selectorHeader = Instance.new("TextLabel", selectorFrame)
     selectorHeader.Size = UDim2.new(1, -20, 0, 40)
@@ -216,25 +265,89 @@ function UILib:CreateWindow(config)
     selectorHeader.TextColor3 = accentColor
     selectorHeader.TextXAlignment = Enum.TextXAlignment.Center
     selectorHeader.TextTransparency = 1
-    
+
     -- Buttons container
     local selectorButtonsContainer = Instance.new("Frame", selectorFrame)
-    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 215)
+    selectorButtonsContainer.Size = UDim2.new(1, -20, 0, 365)
     selectorButtonsContainer.Position = UDim2.fromOffset(10, 55)
     selectorButtonsContainer.BackgroundTransparency = 1
-    
+
     local selectorListLayout = Instance.new("UIListLayout", selectorButtonsContainer)
     selectorListLayout.FillDirection = Enum.FillDirection.Vertical
     selectorListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     selectorListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     selectorListLayout.Padding = UDim.new(0, 10)
     selectorListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    
+
     window.SelectorFrame = selectorFrame
     window.SelectorButtonsContainer = selectorButtonsContainer
     window.SelectorStroke = selectorStroke
     window.SelectorHeader = selectorHeader
+
+    -- Custom Drag Logic with Panel Sync
+    local dragging, dragInput, dragStart, startPos
     
+    local function update(input)
+        local delta = input.Position - dragStart
+        local newPos = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+        selectorFrame.Position = newPos
+        
+        -- SYNC ALL VISIBLE PANELS
+        if window.Panels then
+            for _, panel in pairs(window.Panels) do
+                if panel.Frame and panel.Frame.Visible then
+                if panel.Frame and panel.Frame.Visible then
+                    panel.Frame.Position = UDim2.new(
+                        newPos.X.Scale, newPos.X.Offset + selectorFrame.AbsoluteSize.X + 20,
+                        newPos.Y.Scale, newPos.Y.Offset
+                    )
+                end
+            end
+        end
+    end
+
+    local function enableDrag(frame)
+        frame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = selectorFrame.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+    
+        frame.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+    end
+
+    -- Enable drag on both Frame and Header to ensure input is captured
+    selectorHeader.Active = true 
+    enableDrag(selectorFrame)
+    enableDrag(selectorHeader)
+
+    local dragConnection = UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            -- print("DEBUG: Drag Update loop")
+            update(input)
+        end
+    end)
+    
+    window.DragConnection = dragConnection
+
+    -- Attach methods to window
+    UILib:AddMethods(window)
+
     -- Fade in animation
     task.spawn(function()
         task.wait(0.3)
@@ -242,7 +355,7 @@ function UILib:CreateWindow(config)
         TweenService:Create(selectorStroke, TweenInfo.new(0.6), {Transparency = 0.5}):Play()
         TweenService:Create(selectorHeader, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
     end)
-    
+
     return window
 end
 
@@ -256,7 +369,7 @@ function UILib:CreatePanel(window, config)
     local color = config.Color or window.AccentColor
     local size = config.Size or UDim2.fromOffset(340, 530)
     local layoutOrder = config.LayoutOrder or 1
-    
+
     -- Create panel frame
     local panelFrame = Instance.new("Frame", window.ScreenGui)
     panelFrame.Size = size
@@ -266,12 +379,12 @@ function UILib:CreatePanel(window, config)
     panelFrame.BackgroundTransparency = 1
     panelFrame.Visible = false
     Instance.new("UICorner", panelFrame).CornerRadius = UDim.new(0, 20)
-    
+
     local panelStroke = Instance.new("UIStroke", panelFrame)
     panelStroke.Color = UILib.Colors.JPUFF_PINK
     panelStroke.Thickness = 2
     panelStroke.Transparency = 1
-    
+
     -- Panel header
     local panelHeader = Instance.new("TextLabel", panelFrame)
     panelHeader.Size = UDim2.new(1, -40, 0, 50)
@@ -283,7 +396,7 @@ function UILib:CreatePanel(window, config)
     panelHeader.TextColor3 = UILib.Colors.JPUFF_PINK
     panelHeader.TextXAlignment = Enum.TextXAlignment.Left
     panelHeader.TextTransparency = 1
-    
+
     -- Panel divider
     local panelDivider = Instance.new("Frame", panelFrame)
     panelDivider.Size = UDim2.new(1, -40, 0, 2)
@@ -292,7 +405,19 @@ function UILib:CreatePanel(window, config)
     panelDivider.BorderSizePixel = 0
     panelDivider.BackgroundTransparency = 1
     Instance.new("UICorner", panelDivider).CornerRadius = UDim.new(1, 0)
-    
+
+    -- Scrolling container for panel content
+    local scrollingFrame = Instance.new("ScrollingFrame", panelFrame)
+    scrollingFrame.Size = UDim2.new(1, 0, 1, -85) -- Full width, height minus header
+    scrollingFrame.Position = UDim2.fromOffset(0, 85)
+    scrollingFrame.BackgroundTransparency = 1
+    scrollingFrame.BorderSizePixel = 0
+    scrollingFrame.ScrollBarThickness = 6
+    scrollingFrame.ScrollBarImageColor3 = UILib.Colors.JPUFF_PINK
+    scrollingFrame.CanvasSize = UDim2.fromOffset(0, 0) -- Will auto-adjust
+    scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    scrollingFrame.ClipsDescendants = true
+
     -- Create selector button
     local btn = Instance.new("TextButton", window.SelectorButtonsContainer)
     btn.Size = UDim2.new(1, 0, 0, 45)
@@ -304,7 +429,7 @@ function UILib:CreatePanel(window, config)
     btn.BackgroundTransparency = 1
     btn.LayoutOrder = layoutOrder
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
-    
+
     local mainText = Instance.new("TextLabel", btn)
     mainText.Size = UDim2.new(1, -50, 1, 0)
     mainText.Position = UDim2.fromOffset(15, 0)
@@ -315,7 +440,7 @@ function UILib:CreatePanel(window, config)
     mainText.TextColor3 = Color3.fromRGB(150, 150, 160)
     mainText.TextXAlignment = Enum.TextXAlignment.Left
     mainText.TextTransparency = 1
-    
+
     local arrow = Instance.new("TextLabel", btn)
     arrow.Size = UDim2.fromOffset(30, 45)
     arrow.Position = UDim2.fromOffset(10, 0)
@@ -326,12 +451,12 @@ function UILib:CreatePanel(window, config)
     arrow.TextColor3 = color
     arrow.TextXAlignment = Enum.TextXAlignment.Center
     arrow.TextTransparency = 1
-    
+
     -- Hover effects
     btn.MouseEnter:Connect(function()
         TweenService:Create(mainText, TweenInfo.new(0.2), {TextColor3 = UILib.Colors.TEXT_PRIMARY}):Play()
     end)
-    
+
     btn.MouseLeave:Connect(function()
         if window.CurrentPanel == name then
             TweenService:Create(mainText, TweenInfo.new(0.2), {TextColor3 = color}):Play()
@@ -339,31 +464,47 @@ function UILib:CreatePanel(window, config)
             TweenService:Create(mainText, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(150, 150, 160)}):Play()
         end
     end)
-    
+
     -- Fade in button text
     task.spawn(function()
         task.wait(0.5)
         TweenService:Create(mainText, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
     end)
-    
+
     local panel = {
         Name = name,
         Frame = panelFrame,
+        ScrollingFrame = scrollingFrame,
         Button = btn,
         Arrow = arrow,
         MainText = mainText,
         Color = color,
         Size = size,
-        ContentY = 90, -- Starting Y position for content
+        ContentY = 90, -- Starting Y position for content (relative to scrolling frame)
+        UpdateCanvasSize = function(self)
+            -- Auto-adjust canvas size based on content
+            local maxY = 0
+            for _, child in ipairs(scrollingFrame:GetChildren()) do
+                if child:IsA("GuiObject") then
+                    local childBottom = child.AbsolutePosition.Y + child.AbsoluteSize.Y
+                    local scrollTop = scrollingFrame.AbsolutePosition.Y
+                    local relativeBottom = childBottom - scrollTop
+                    if relativeBottom > maxY then
+                        maxY = relativeBottom
+                    end
+                end
+            end
+            scrollingFrame.CanvasSize = UDim2.fromOffset(0, math.max(maxY + 20, scrollingFrame.AbsoluteSize.Y))
+        end
     }
-    
+
     -- Panel switching logic
     btn.MouseButton1Click:Connect(function()
         window:ShowPanel(name)
     end)
-    
+
     window.Panels[name] = panel
-    
+
     return panel
 end
 
@@ -373,7 +514,7 @@ end
 function UILib:ShowPanel(window, panelName)
     local panel = window.Panels[panelName]
     if not panel then return end
-    
+
     -- If clicking the same panel, hide it
     if window.CurrentPanel == panelName then
         window:HidePanel(panelName)
@@ -381,7 +522,7 @@ function UILib:ShowPanel(window, panelName)
         TweenService:Create(panel.MainText, TweenInfo.new(0.3), {TextColor3 = Color3.fromRGB(150, 150, 160), Position = UDim2.fromOffset(15, 0)}):Play()
         return
     end
-    
+
     -- Hide current panel if exists
     if window.CurrentPanel then
         local oldPanel = window.Panels[window.CurrentPanel]
@@ -392,7 +533,7 @@ function UILib:ShowPanel(window, panelName)
         end
         task.wait(0.4)
     end
-    
+
     -- Show new panel
     window.CurrentPanel = panelName
     panel.Frame.Visible = true
@@ -401,18 +542,18 @@ function UILib:ShowPanel(window, panelName)
         window.SelectorFrame.AbsolutePosition.X + window.SelectorFrame.AbsoluteSize.X / 2,
         window.SelectorFrame.AbsolutePosition.Y + 80
     )
-    
+
     -- Animate text and arrow
     TweenService:Create(panel.MainText, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
         {TextColor3 = panel.Color, Position = UDim2.fromOffset(45, 0)}):Play()
-    
+
     task.delay(0.12, function()
         if window.CurrentPanel == panelName then
             TweenService:Create(panel.Arrow, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
                 {TextTransparency = 0, Position = UDim2.fromOffset(15, 0)}):Play()
         end
     end)
-    
+
     -- Animate panel
     TweenService:Create(panel.Frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
         {Size = panel.Size, Position = UDim2.fromOffset(
@@ -421,12 +562,12 @@ function UILib:ShowPanel(window, panelName)
         )}):Play()
     TweenService:Create(panel.Frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
         {BackgroundTransparency = 0.15}):Play()
-    
+
     local panelStroke = panel.Frame:FindFirstChildOfClass("UIStroke")
     if panelStroke then
         TweenService:Create(panelStroke, TweenInfo.new(0.6), {Transparency = 0.5}):Play()
     end
-    
+
     -- Fade in all content
     for _, child in ipairs(panel.Frame:GetDescendants()) do
         if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
@@ -448,13 +589,13 @@ end
 function UILib:HidePanel(window, panelName)
     local panel = window.Panels[panelName]
     if not panel or window.CurrentPanel ~= panelName then return end
-    
+
     TweenService:Create(panel.Frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.fromOffset(0, 0), Position = UDim2.fromOffset(
             window.SelectorFrame.AbsolutePosition.X + window.SelectorFrame.AbsoluteSize.X / 2,
             window.SelectorFrame.AbsolutePosition.Y + 80
         )}):Play()
-    
+
     task.wait(0.4)
     panel.Frame.Visible = false
     window.CurrentPanel = nil
@@ -469,8 +610,8 @@ function UILib:CreateToggle(panel, config)
     local initialState = config.Default or false
     local callback = config.Callback or function() end
     local y = panel.ContentY
-    
-    local label = Instance.new("TextLabel", panel.Frame)
+
+    local label = Instance.new("TextLabel", panel.ScrollingFrame)
     label.Size = UDim2.new(1, -150, 0, 45)
     label.Position = UDim2.fromOffset(30, y)
     label.BackgroundTransparency = 1
@@ -481,15 +622,15 @@ function UILib:CreateToggle(panel, config)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.TextTransparency = 0
-    
-    local track = Instance.new("Frame", panel.Frame)
+
+    local track = Instance.new("Frame", panel.ScrollingFrame)
     track.Size = UDim2.fromOffset(90, 40)
     track.Position = UDim2.new(1, -120, 0, y + 2.5)
     track.BackgroundColor3 = initialState and UILib.Colors.JPUFF_HOT_PINK or UILib.Colors.TOGGLE_OFF
     track.BorderSizePixel = 0
     track.BackgroundTransparency = 0
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
-    
+
     local ballBg = Instance.new("Frame", track)
     ballBg.Size = UDim2.fromOffset(34, 34)
     ballBg.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -498,7 +639,7 @@ function UILib:CreateToggle(panel, config)
     ballBg.BackgroundTransparency = 1
     ballBg.BorderSizePixel = 0
     Instance.new("UICorner", ballBg).CornerRadius = UDim.new(1, 0)
-    
+
     -- OFF IMAGE (Sleep)
     local imgOff = Instance.new("ImageLabel", ballBg)
     imgOff.Name = "ImgOff"
@@ -510,7 +651,7 @@ function UILib:CreateToggle(panel, config)
     imgOff.BorderSizePixel = 0
     imgOff.ZIndex = 2
     Instance.new("UICorner", imgOff).CornerRadius = UDim.new(1, 0)
-    
+
     -- ON IMAGE (Awake)
     local imgOn = Instance.new("ImageLabel", ballBg)
     imgOn.Name = "ImgOn"
@@ -522,7 +663,7 @@ function UILib:CreateToggle(panel, config)
     imgOn.BorderSizePixel = 0
     imgOn.ZIndex = 2
     Instance.new("UICorner", imgOn).CornerRadius = UDim.new(1, 0)
-    
+
     -- Set initial visibility
     if initialState then
         imgOn.ImageTransparency = 0
@@ -535,48 +676,48 @@ function UILib:CreateToggle(panel, config)
         imgOff.ImageTransparency = 0
         imgOff.Visible = true
     end
-    
+
     local button = Instance.new("TextButton", track)
     button.Size = UDim2.fromScale(1, 1)
     button.BackgroundTransparency = 1
     button.Text = ""
-    
+
     local state = initialState
     local accumulatedRotation = 0
     local isAnimating = false
-    
+
     local function toggle()
         if isAnimating then return state end
         isAnimating = true
-        
+
         state = not state
-        
+
         -- Enable both and force start values
         imgOn.Visible = true
         imgOn.ImageTransparency = state and 1 or 0
         imgOff.Visible = true
         imgOff.ImageTransparency = state and 0 or 1
-        
+
         -- Animate track color
         TweenService:Create(track, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
             {BackgroundColor3 = state and UILib.Colors.JPUFF_HOT_PINK or UILib.Colors.TOGGLE_OFF}):Play()
-        
+
         -- Animate ball position
         TweenService:Create(ballBg, TweenInfo.new(0.65, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), 
             {Position = state and UDim2.fromOffset(70, 20) or UDim2.fromOffset(20, 20)}):Play()
-        
+
         -- Spin animation
         local rotationChange = state and 360 or -360
         accumulatedRotation = accumulatedRotation + rotationChange
         TweenService:Create(ballBg, TweenInfo.new(0.65, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), 
             {Rotation = accumulatedRotation}):Play()
-        
+
         -- Cross-fade images
         TweenService:Create(imgOn, TweenInfo.new(0.65, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), 
             {ImageTransparency = state and 0 or 1}):Play()
         TweenService:Create(imgOff, TweenInfo.new(0.65, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), 
             {ImageTransparency = state and 1 or 0}):Play()
-        
+
         task.delay(0.65, function()
             isAnimating = false
             if state then
@@ -585,15 +726,16 @@ function UILib:CreateToggle(panel, config)
                 imgOn.Visible = false
             end
         end)
-        
+
         callback(state)
         return state
     end
-    
+
     button.MouseButton1Click:Connect(toggle)
-    
+
     panel.ContentY = panel.ContentY + 55
-    
+    panel:UpdateCanvasSize()
+
     return {
         Toggle = toggle,
         GetState = function() return state end,
@@ -614,8 +756,8 @@ function UILib:CreateButton(panel, config)
     local color = config.Color or UILib.Colors.SUCCESS
     local callback = config.Callback or function() end
     local y = panel.ContentY
-    
-    local btn = Instance.new("TextButton", panel.Frame)
+
+    local btn = Instance.new("TextButton", panel.ScrollingFrame)
     btn.Size = UDim2.new(1, -60, 0, 45)
     btn.Position = UDim2.fromOffset(30, y)
     btn.BackgroundColor3 = color
@@ -627,7 +769,7 @@ function UILib:CreateButton(panel, config)
     btn.BackgroundTransparency = 0.1
     btn.TextTransparency = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
-    
+
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.2), {
             BackgroundColor3 = Color3.fromRGB(
@@ -637,15 +779,16 @@ function UILib:CreateButton(panel, config)
             )
         }):Play()
     end)
-    
+
     btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = color}):Play()
     end)
-    
+
     btn.MouseButton1Click:Connect(callback)
-    
+
     panel.ContentY = panel.ContentY + 55
-    
+    panel:UpdateCanvasSize()
+
     return btn
 end
 
@@ -656,8 +799,8 @@ function UILib:CreateTextInput(panel, config)
     config = config or {}
     local placeholder = config.Placeholder or "Enter text..."
     local y = panel.ContentY
-    
-    local input = Instance.new("TextBox", panel.Frame)
+
+    local input = Instance.new("TextBox", panel.ScrollingFrame)
     input.Size = UDim2.new(1, -40, 0, 45)
     input.Position = UDim2.fromOffset(20, y)
     input.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -671,14 +814,308 @@ function UILib:CreateTextInput(panel, config)
     input.BackgroundTransparency = 0.2
     input.TextTransparency = 1
     Instance.new("UICorner", input).CornerRadius = UDim.new(0, 12)
-    
+
     local stroke = Instance.new("UIStroke", input)
     stroke.Color = UILib.Colors.JPUFF_PINK
     stroke.Transparency = 0.8
-    
+
     panel.ContentY = panel.ContentY + 55
-    
+    panel:UpdateCanvasSize()
+
     return input
+end
+
+-- =====================================================
+-- SLIDER
+-- =====================================================
+function UILib:CreateSlider(panel, config)
+    config = config or {}
+    local text = config.Text or "Slider"
+    local min = config.Min or 0
+    local max = config.Max or 100
+    local default = config.Default or min
+    local callback = config.Callback or function() end
+    local y = panel.ContentY
+
+    local label = Instance.new("TextLabel", panel.ScrollingFrame)
+    label.Size = UDim2.new(1, -40, 0, 20)
+    label.Position = UDim2.fromOffset(30, y)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 14
+    label.TextColor3 = UILib.Colors.TEXT_PRIMARY
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local valueLabel = Instance.new("TextLabel", panel.ScrollingFrame)
+    valueLabel.Size = UDim2.new(0, 50, 0, 20)
+    valueLabel.Position = UDim2.new(1, -80, 0, y)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(default)
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextSize = 14
+    valueLabel.TextColor3 = UILib.Colors.JPUFF_PINK
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    
+    local sliderBg = Instance.new("Frame", panel.ScrollingFrame)
+    sliderBg.Size = UDim2.new(1, -60, 0, 8)
+    sliderBg.Position = UDim2.fromOffset(30, y + 25)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    sliderBg.BorderSizePixel = 0
+    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
+    
+    local sliderFill = Instance.new("Frame", sliderBg)
+    sliderFill.Size = UDim2.fromScale((default - min) / (max - min), 1)
+    sliderFill.BackgroundColor3 = UILib.Colors.JPUFF_HOT_PINK
+    sliderFill.BorderSizePixel = 0
+    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0)
+    
+    local sliderKnob = Instance.new("Frame", sliderBg)
+    sliderKnob.Size = UDim2.fromOffset(16, 16)
+    sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+    sliderKnob.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+    sliderKnob.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    sliderKnob.BorderSizePixel = 0
+    Instance.new("UICorner", sliderKnob).CornerRadius = UDim.new(1, 0)
+    
+    local btn = Instance.new("TextButton", sliderBg)
+    btn.Size = UDim2.fromScale(1, 1)
+    btn.BackgroundTransparency = 1
+    btn.Text = ""
+    
+    local dragging = false
+    
+    local function update(input)
+        local pos = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+        local value = math.floor(min + ((max - min) * pos))
+        
+        TweenService:Create(sliderFill, TweenInfo.new(0.05), {Size = UDim2.fromScale(pos, 1)}):Play()
+        TweenService:Create(sliderKnob, TweenInfo.new(0.05), {Position = UDim2.new(pos, 0, 0.5, 0)}):Play()
+        valueLabel.Text = tostring(value)
+        
+        callback(value)
+    end
+    
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            update(input)
+        end
+    end)
+    
+    local UserInputService = game:GetService("UserInputService")
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    panel.ContentY = panel.ContentY + 50
+    panel:UpdateCanvasSize()
+
+    return {
+        SetValue = function(val)
+            local pos = math.clamp((val - min) / (max - min), 0, 1)
+            TweenService:Create(sliderFill, TweenInfo.new(0.2), {Size = UDim2.fromScale(pos, 1)}):Play()
+            TweenService:Create(sliderKnob, TweenInfo.new(0.2), {Position = UDim2.new(pos, 0, 0.5, 0)}):Play()
+            valueLabel.Text = tostring(val)
+        end
+    }
+end
+
+-- =====================================================
+-- DROPDOWN
+-- =====================================================
+function UILib:CreateDropdown(panel, config)
+    config = config or {}
+    local label = config.Label or "Dropdown"
+    local options = config.Options or {"Option 1", "Option 2", "Option 3"}
+    local callback = config.Callback or function() end
+    local y = panel.ContentY
+    
+    -- Label
+    local labelText = Instance.new("TextLabel", panel.ScrollingFrame)
+    labelText.Size = UDim2.new(1, -60, 0, 20)
+    labelText.Position = UDim2.fromOffset(30, y)
+    labelText.BackgroundTransparency = 1
+    labelText.Text = label
+    labelText.Font = Enum.Font.GothamMedium
+    labelText.TextSize = 14
+    labelText.TextColor3 = UILib.Colors.TEXT_PRIMARY
+    labelText.TextXAlignment = Enum.TextXAlignment.Left
+    labelText.TextTransparency = 0
+    
+    -- Dropdown button
+    local dropdownBtn = Instance.new("TextButton", panel.ScrollingFrame)
+    dropdownBtn.Size = UDim2.new(1, -60, 0, 45)
+    dropdownBtn.Position = UDim2.fromOffset(30, y + 25)
+    dropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    dropdownBtn.Text = ""
+    dropdownBtn.BorderSizePixel = 0
+    dropdownBtn.BackgroundTransparency = 0.2
+    Instance.new("UICorner", dropdownBtn).CornerRadius = UDim.new(0, 12)
+    
+    local dropdownStroke = Instance.new("UIStroke", dropdownBtn)
+    dropdownStroke.Color = UILib.Colors.JPUFF_PINK
+    dropdownStroke.Transparency = 0.8
+    
+    -- Selected text
+    local selectedText = Instance.new("TextLabel", dropdownBtn)
+    selectedText.Size = UDim2.new(1, -40, 1, 0)
+    selectedText.Position = UDim2.fromOffset(15, 0)
+    selectedText.BackgroundTransparency = 1
+    selectedText.Text = "Select..."
+    selectedText.Font = Enum.Font.GothamMedium
+    selectedText.TextSize = 15
+    selectedText.TextColor3 = UILib.Colors.TEXT_SECONDARY
+    selectedText.TextXAlignment = Enum.TextXAlignment.Left
+    selectedText.TextTransparency = 0
+    
+    -- Arrow indicator
+    local arrow = Instance.new("TextLabel", dropdownBtn)
+    arrow.Size = UDim2.fromOffset(30, 45)
+    arrow.Position = UDim2.new(1, -35, 0, 0)
+    arrow.BackgroundTransparency = 1
+    arrow.Text = "▼"
+    arrow.Font = Enum.Font.GothamBold
+    arrow.TextSize = 12
+    arrow.TextColor3 = UILib.Colors.JPUFF_PINK
+    arrow.TextXAlignment = Enum.TextXAlignment.Center
+    arrow.TextTransparency = 0
+    
+    -- Options container (hidden by default)
+    local optionsContainer = Instance.new("Frame", panel.ScrollingFrame)
+    optionsContainer.Size = UDim2.new(1, -60, 0, 0)
+    optionsContainer.Position = UDim2.fromOffset(30, y + 75)
+    optionsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    optionsContainer.BorderSizePixel = 0
+    optionsContainer.Visible = false
+    optionsContainer.ClipsDescendants = true
+    optionsContainer.ZIndex = 100
+    Instance.new("UICorner", optionsContainer).CornerRadius = UDim.new(0, 12)
+    
+    local optionsStroke = Instance.new("UIStroke", optionsContainer)
+    optionsStroke.Color = UILib.Colors.JPUFF_PINK
+    optionsStroke.Transparency = 0.6
+    
+    -- Scrolling frame for options
+    local scrollFrame = Instance.new("ScrollingFrame", optionsContainer)
+    scrollFrame.Size = UDim2.fromScale(1, 1)
+    scrollFrame.Position = UDim2.fromOffset(0, 0)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 4
+    scrollFrame.ScrollBarImageColor3 = UILib.Colors.JPUFF_PINK
+    scrollFrame.ZIndex = 101
+    
+    local listLayout = Instance.new("UIListLayout", scrollFrame)
+    listLayout.FillDirection = Enum.FillDirection.Vertical
+    listLayout.Padding = UDim.new(0, 2)
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    local isOpen = false
+    local selectedOption = nil
+    
+    -- Create option buttons
+    for i, option in ipairs(options) do
+        local optionBtn = Instance.new("TextButton", scrollFrame)
+        optionBtn.Size = UDim2.new(1, -10, 0, 40)
+        optionBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        optionBtn.Text = option
+        optionBtn.Font = Enum.Font.GothamMedium
+        optionBtn.TextSize = 14
+        optionBtn.TextColor3 = UILib.Colors.TEXT_PRIMARY
+        optionBtn.BorderSizePixel = 0
+        optionBtn.BackgroundTransparency = 0.3
+        optionBtn.ZIndex = 102
+        Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 8)
+        
+        -- Hover effect
+        optionBtn.MouseEnter:Connect(function()
+            TweenService:Create(optionBtn, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(60, 60, 70),
+                BackgroundTransparency = 0
+            }):Play()
+        end)
+        
+        optionBtn.MouseLeave:Connect(function()
+            TweenService:Create(optionBtn, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(40, 40, 50),
+                BackgroundTransparency = 0.3
+            }):Play()
+        end)
+        
+        -- Click handler
+        optionBtn.MouseButton1Click:Connect(function()
+            selectedOption = option
+            selectedText.Text = option
+            selectedText.TextColor3 = UILib.Colors.TEXT_PRIMARY
+            
+            -- Close dropdown
+            isOpen = false
+            TweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            TweenService:Create(optionsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, -60, 0, 0)
+            }):Play()
+            
+            task.delay(0.3, function()
+                optionsContainer.Visible = false
+            end)
+            
+            -- Execute callback
+            callback(option)
+        end)
+    end
+    
+    -- Update scroll canvas size
+    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+    end)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+    
+    -- Toggle dropdown
+    dropdownBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        
+        if isOpen then
+            optionsContainer.Visible = true
+            local maxHeight = math.min(#options * 42, 200)
+            
+            TweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
+            TweenService:Create(optionsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, -60, 0, maxHeight)
+            }):Play()
+        else
+            TweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            TweenService:Create(optionsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, -60, 0, 0)
+            }):Play()
+            
+            task.delay(0.3, function()
+                optionsContainer.Visible = false
+            end)
+        end
+    end)
+    
+    panel.ContentY = panel.ContentY + 80
+    panel:UpdateCanvasSize()
+    
+    return {
+        SetValue = function(value)
+            selectedOption = value
+            selectedText.Text = value
+            selectedText.TextColor3 = UILib.Colors.TEXT_PRIMARY
+        end,
+        GetValue = function()
+            return selectedOption
+        end
+    }
 end
 
 -- =====================================================
@@ -689,23 +1126,23 @@ function UILib:CreateNotification(config)
     local text = config.Text or "Notification"
     local duration = config.Duration or 3
     local color = config.Color or UILib.Colors.SUCCESS
-    
+
     local notif = Instance.new("ScreenGui", gui)
     notif.Name = "UILibNotification"
     notif.ResetOnSpawn = false
     notif.DisplayOrder = 200
-    
+
     local frame = Instance.new("Frame", notif)
     frame.Size = UDim2.new(0, 300, 0, 80)
     frame.Position = UDim2.new(1, -320, 0, 20)
     frame.BackgroundColor3 = UILib.Colors.BG_DARK
     frame.BackgroundTransparency = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
-    
+
     local stroke = Instance.new("UIStroke", frame)
     stroke.Color = color
     stroke.Thickness = 2
-    
+
     local label = Instance.new("TextLabel", frame)
     label.Size = UDim2.new(1, -20, 1, -20)
     label.Position = UDim2.fromOffset(10, 10)
@@ -716,12 +1153,12 @@ function UILib:CreateNotification(config)
     label.TextColor3 = UILib.Colors.TEXT_PRIMARY
     label.TextWrapped = true
     label.TextYAlignment = Enum.TextYAlignment.Center
-    
+
     -- Slide in
     frame.Position = UDim2.new(1, 0, 0, 20)
     TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
         {Position = UDim2.new(1, -320, 0, 20)}):Play()
-    
+
     -- Slide out and destroy
     task.delay(duration, function()
         TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), 
@@ -729,153 +1166,8 @@ function UILib:CreateNotification(config)
         task.wait(0.3)
         notif:Destroy()
     end)
-    
-    return notif
-end
 
--- =====================================================
--- CONFIRMATION DIALOG
--- =====================================================
-function UILib:CreateConfirmation(config)
-    config = config or {}
-    local title = config.Title or "⚠️ WARNING"
-    local message = config.Message or "Are you sure?"
-    local confirmText = config.ConfirmText or "I'm sure"
-    local cancelText = config.CancelText or "Cancel"
-    local onConfirm = config.OnConfirm or function() end
-    local onCancel = config.OnCancel or function() end
-    
-    local confirmationGui = Instance.new("ScreenGui", gui)
-    confirmationGui.Name = "UILibConfirmation"
-    confirmationGui.ResetOnSpawn = false
-    confirmationGui.IgnoreGuiInset = true
-    confirmationGui.DisplayOrder = 1000
-    confirmationGui.Enabled = true
-    
-    local confirmBlur = Instance.new("BlurEffect", Lighting)
-    confirmBlur.Size = 0
-    confirmBlur.Name = "UILibConfirmBlur"
-    
-    local confirmOverlay = Instance.new("Frame", confirmationGui)
-    confirmOverlay.Size = UDim2.fromScale(1, 1)
-    confirmOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    confirmOverlay.BackgroundTransparency = 1
-    
-    local confirmDialog = Instance.new("Frame", confirmOverlay)
-    confirmDialog.Size = UDim2.fromOffset(420, 240)
-    confirmDialog.Position = UDim2.fromScale(0.5, 0.5)
-    confirmDialog.AnchorPoint = Vector2.new(0.5, 0.5)
-    confirmDialog.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    confirmDialog.BackgroundTransparency = 1
-    Instance.new("UICorner", confirmDialog).CornerRadius = UDim.new(0, 20)
-    
-    local confirmStroke = Instance.new("UIStroke", confirmDialog)
-    confirmStroke.Color = UILib.Colors.JPUFF_HOT_PINK
-    confirmStroke.Thickness = 2
-    confirmStroke.Transparency = 1
-    
-    local confirmTitle = Instance.new("TextLabel", confirmDialog)
-    confirmTitle.Size = UDim2.new(1, -40, 0, 45)
-    confirmTitle.Position = UDim2.fromOffset(20, 20)
-    confirmTitle.BackgroundTransparency = 1
-    confirmTitle.Text = title
-    confirmTitle.Font = Enum.Font.GothamBold
-    confirmTitle.TextSize = 24
-    confirmTitle.TextColor3 = UILib.Colors.JPUFF_HOT_PINK
-    confirmTitle.TextXAlignment = Enum.TextXAlignment.Left
-    confirmTitle.TextTransparency = 1
-    
-    local confirmMessage = Instance.new("TextLabel", confirmDialog)
-    confirmMessage.Size = UDim2.new(1, -40, 0, 90)
-    confirmMessage.Position = UDim2.fromOffset(20, 75)
-    confirmMessage.BackgroundTransparency = 1
-    confirmMessage.Text = message
-    confirmMessage.Font = Enum.Font.GothamMedium
-    confirmMessage.TextSize = 16
-    confirmMessage.TextColor3 = UILib.Colors.TEXT_PRIMARY
-    confirmMessage.TextWrapped = true
-    confirmMessage.TextXAlignment = Enum.TextXAlignment.Left
-    confirmMessage.TextYAlignment = Enum.TextYAlignment.Top
-    confirmMessage.TextTransparency = 1
-    
-    local buttonContainer = Instance.new("Frame", confirmDialog)
-    buttonContainer.Size = UDim2.new(1, -40, 0, 50)
-    buttonContainer.Position = UDim2.fromOffset(20, 175)
-    buttonContainer.BackgroundTransparency = 1
-    
-    local cancelBtn = Instance.new("TextButton", buttonContainer)
-    cancelBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    cancelBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
-    cancelBtn.Text = cancelText
-    cancelBtn.Font = Enum.Font.GothamBold
-    cancelBtn.TextSize = 17
-    cancelBtn.TextColor3 = UILib.Colors.TEXT_PRIMARY
-    cancelBtn.BackgroundTransparency = 1
-    cancelBtn.TextTransparency = 1
-    Instance.new("UICorner", cancelBtn).CornerRadius = UDim.new(0, 12)
-    
-    local sureBtn = Instance.new("TextButton", buttonContainer)
-    sureBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    sureBtn.Position = UDim2.fromScale(0.52, 0)
-    sureBtn.BackgroundColor3 = UILib.Colors.ERROR
-    sureBtn.Text = confirmText
-    sureBtn.Font = Enum.Font.GothamBold
-    sureBtn.TextSize = 17
-    sureBtn.TextColor3 = UILib.Colors.TEXT_PRIMARY
-    sureBtn.BackgroundTransparency = 1
-    sureBtn.TextTransparency = 1
-    Instance.new("UICorner", sureBtn).CornerRadius = UDim.new(0, 12)
-    
-    local function show()
-        if not confirmBlur or not confirmBlur.Parent then
-            confirmBlur = Instance.new("BlurEffect", Lighting)
-            confirmBlur.Name = "UILibConfirmBlur"
-            confirmBlur.Size = 0
-        end
-        
-        confirmationGui.Enabled = true
-        TweenService:Create(confirmBlur, TweenInfo.new(0.4), {Size = 20}):Play()
-        TweenService:Create(confirmOverlay, TweenInfo.new(0.4), {BackgroundTransparency = 0.6}):Play()
-        TweenService:Create(confirmDialog, TweenInfo.new(0.4), {BackgroundTransparency = 0.05}):Play()
-        TweenService:Create(confirmStroke, TweenInfo.new(0.4), {Transparency = 0.3}):Play()
-        TweenService:Create(confirmTitle, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-        TweenService:Create(confirmMessage, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-        TweenService:Create(cancelBtn, TweenInfo.new(0.4), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-        TweenService:Create(sureBtn, TweenInfo.new(0.4), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-    end
-    
-    local function hide()
-        TweenService:Create(confirmBlur, TweenInfo.new(0.3), {Size = 0}):Play()
-        TweenService:Create(confirmOverlay, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(confirmDialog, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(confirmTitle, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        TweenService:Create(confirmMessage, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
-        TweenService:Create(cancelBtn, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
-        TweenService:Create(sureBtn, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
-        task.wait(0.3)
-        confirmationGui.Enabled = false
-    end
-    
-    cancelBtn.MouseButton1Click:Connect(function()
-        hide()
-        onCancel()
-    end)
-    
-    sureBtn.MouseButton1Click:Connect(function()
-        hide()
-        onConfirm()
-    end)
-    
-    show()
-    
-    return {
-        Show = show,
-        Hide = hide,
-        Destroy = function()
-            if confirmBlur then confirmBlur:Destroy() end
-            if confirmationGui then confirmationGui:Destroy() end
-        end
-    }
+    return notif
 end
 
 -- =====================================================
@@ -884,7 +1176,7 @@ end
 function UILib:AddToggleKey(window, keyCode)
     keyCode = keyCode or Enum.KeyCode.RightShift
     local guiVisible = true
-    
+
     UserInputService.InputBegan:Connect(function(input, gp)
         if not gp and input.KeyCode == keyCode then
             guiVisible = not guiVisible
@@ -913,31 +1205,6 @@ function UILib:AddToggleKey(window, keyCode)
     end)
 end
 
--- =====================================================
--- METHODS FOR WINDOW
--- =====================================================
-function UILib:AddMethods(window)
-    window.ShowPanel = function(self, panelName)
-        UILib:ShowPanel(self, panelName)
-    end
-    
-    window.HidePanel = function(self, panelName)
-        UILib:HidePanel(self, panelName)
-    end
-    
-    window.CreatePanel = function(self, config)
-        return UILib:CreatePanel(self, config)
-    end
-    
-    window.AddToggleKey = function(self, keyCode)
-        UILib:AddToggleKey(self, keyCode)
-    end
-    
-    window.Destroy = function(self)
-        if self.ScreenGui then
-            self.ScreenGui:Destroy()
-        end
-    end
-end
+
 
 return UILib
