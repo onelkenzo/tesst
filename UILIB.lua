@@ -482,19 +482,8 @@ function UILib:CreatePanel(window, config)
         Size = size,
         ContentY = 90, -- Starting Y position for content (relative to scrolling frame)
         UpdateCanvasSize = function(self)
-            -- Auto-adjust canvas size based on content
-            local maxY = 0
-            for _, child in ipairs(scrollingFrame:GetChildren()) do
-                if child:IsA("GuiObject") then
-                    local childBottom = child.AbsolutePosition.Y + child.AbsoluteSize.Y
-                    local scrollTop = scrollingFrame.AbsolutePosition.Y
-                    local relativeBottom = childBottom - scrollTop
-                    if relativeBottom > maxY then
-                        maxY = relativeBottom
-                    end
-                end
-            end
-            scrollingFrame.CanvasSize = UDim2.fromOffset(0, math.max(maxY + 20, scrollingFrame.AbsoluteSize.Y))
+            -- Auto-adjust canvas size based on ContentY
+            scrollingFrame.CanvasSize = UDim2.fromOffset(0, math.max(self.ContentY + 20, scrollingFrame.AbsoluteSize.Y or 400))
         end
     }
 
