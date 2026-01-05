@@ -1938,36 +1938,6 @@ local KeybindsPanel = Window:CreatePanel({
 })
 
 UILib:CreateKeybind(KeybindsPanel, {
-    ActionName = "Toggle Auto Farm",
-    DefaultKey = Enum.KeyCode.F,
-    Callback = function()
-        getgenv().AutoLoot = not getgenv().AutoLoot
-        
-        if getgenv().AutoLoot then
-            -- Start Auto Farm loop
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                getgenv().SavedFarmPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
-            end
-            
-            local myUID = math.random(1, 1000000)
-            getgenv().AutoLootUID = myUID
-            
-            task.spawn(function()
-                while getgenv().AutoLoot and getgenv().AutoLootUID == myUID do
-                    -- Same auto farm logic from the toggle
-                    task.wait(0.1)
-                end
-            end)
-        end
-        
-        UILib:CreateNotification({
-            Text = "Auto Farm: " .. (getgenv().AutoLoot and "ON" or "OFF"),
-            Duration = 2
-        })
-    end
-})
-
-UILib:CreateKeybind(KeybindsPanel, {
     ActionName = "Toggle Cyberpsycho",
     DefaultKey = Enum.KeyCode.P,
     Callback = function()
@@ -2028,58 +1998,6 @@ UILib:CreateKeybind(KeybindsPanel, {
             Duration = 2,
             Color = getgenv().CyberpsychoMode and UILib.Colors.ERROR or UILib.Colors.SUCCESS
         })
-    end
-})
-
-UILib:CreateKeybind(KeybindsPanel, {
-    ActionName = "Toggle Infinite Stamina",
-    DefaultKey = Enum.KeyCode.G,
-    Callback = function()
-        getgenv().InfStamina = not getgenv().InfStamina
-        
-        if getgenv().InfStamina then
-            -- Start Infinite Stamina loop
-            task.spawn(function()
-                while getgenv().InfStamina do
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Values") and LocalPlayer.Character.Values:FindFirstChild("Stamina") then
-                        local args = {
-                            LocalPlayer.Character.Values.Stamina,
-                            100
-                        }
-                        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
-                        if remotes and remotes:FindFirstChild("Stamina") then
-                            remotes.Stamina:FireServer(unpack(args))
-                        end
-                    end
-                    task.wait(1)
-                end
-            end)
-        end
-        
-        UILib:CreateNotification({
-            Text = "Infinite Stamina: " .. (getgenv().InfStamina and "ON" or "OFF"),
-            Duration = 2
-        })
-    end
-})
-
-UILib:CreateKeybind(KeybindsPanel, {
-    ActionName = "TP to Crate",
-    DefaultKey = Enum.KeyCode.T,
-    Callback = function()
-        local cratesFolder = Workspace:FindFirstChild("Crates") and Workspace.Crates:FindFirstChild("AccessoryCrates")
-        if cratesFolder then
-            for _, crate in ipairs(cratesFolder:GetChildren()) do
-                if crate.Name == "AccessoryCrate" and crate:FindFirstChild("colorable") then
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = crate.colorable.CFrame + Vector3.new(0, 5, 0)
-                        UILib:CreateNotification({Text = "Teleported to Crate!", Duration = 2})
-                        return
-                    end
-                end
-            end
-        end
-        UILib:CreateNotification({Text = "No crates found!", Duration = 2, Color = UILib.Colors.ERROR})
     end
 })
 
