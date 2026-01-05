@@ -96,6 +96,7 @@ function UILib:StartKeybindListener()
     
     self.KeybindListener = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end -- Ignore if typing in textbox
+        if self.ListeningForKeybind then return end -- Ignore if changing a keybind
         
         for actionName, keybind in pairs(self.Keybinds) do
             if keybind.Key and input.KeyCode == keybind.Key then
@@ -1150,11 +1151,12 @@ function UILib:CreateKeybind(panel, config)
         Callback = callback
     }
     
-    -- Container for the keybind row (like panel selector button)
+    -- Container for the keybind row (no background)
     local container = Instance.new("Frame", panel.ScrollingFrame)
     container.Size = UDim2.new(1, -20, 0, 35)
     container.Position = UDim2.fromOffset(10, y)
     container.BackgroundTransparency = 1
+    container.BorderSizePixel = 0
     
     -- Action name label (left side)
     local label = Instance.new("TextLabel", container)
@@ -1205,6 +1207,7 @@ function UILib:CreateKeybind(panel, config)
     clickBtn.MouseButton1Click:Connect(function()
         if listening then return end
         listening = true
+        self.ListeningForKeybind = true -- Disable global keybind listener
         keybindText.Text = "..."
         keybindText.TextColor3 = self.Colors.JPUFF_PINK
         
@@ -1215,6 +1218,7 @@ function UILib:CreateKeybind(panel, config)
             
             connection:Disconnect()
             listening = false
+            self.ListeningForKeybind = false -- Re-enable global keybind listener
             
             -- ESC = unbind
             if input.KeyCode == Enum.KeyCode.Escape then
