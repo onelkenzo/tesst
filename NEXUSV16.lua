@@ -1482,6 +1482,57 @@ UILib:CreateToggle(CombatPanel, {
     end
 })
 
+-- Anti-Downed Toggle (Prevents Knockdown)
+getgenv().AntiDowned = false
+
+UILib:CreateToggle(CombatPanel, {
+    Label = "Anti-Downed",
+    Default = false,
+    Callback = function(state)
+        getgenv().AntiDowned = state
+        
+        if state then
+            task.spawn(function()
+                while getgenv().AntiDowned do
+                    if LocalPlayer.Character then
+                        local char = LocalPlayer.Character
+                        local values = char:FindFirstChild("Values")
+                        
+                        if values then
+                            -- Prevent knockdown
+                            local knocked = values:FindFirstChild("Knocked")
+                            if knocked and knocked.Value == true then
+                                knocked.Value = false
+                            end
+                            
+                            -- Prevent stun
+                            local stun = values:FindFirstChild("Stun")
+                            if stun and stun.Value == true then
+                                stun.Value = false
+                            end
+                        end
+                        
+                        -- Keep humanoid in running state
+                        local hum = char:FindFirstChild("Humanoid")
+                        if hum then
+                            local state = hum:GetState()
+                            -- If in ragdoll/dead state, force back to running
+                            if state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.Dead then
+                                hum:ChangeState(Enum.HumanoidStateType.Running)
+                            end
+                        end
+                    end
+                    task.wait(0.05) -- Check every 50ms
+                end
+            end)
+            
+            UILib:CreateNotification({Text = "Anti-Downed ENABLED ✊", Duration = 2, Color = UILib.Colors.SUCCESS})
+        else
+            UILib:CreateNotification({Text = "Anti-Downed Disabled", Duration = 2})
+        end
+    end
+})
+
 -- ========================================
 -- Misc Panel (Formerly Netrunner Hacks)
 -- ========================================
