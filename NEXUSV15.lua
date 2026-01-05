@@ -1942,6 +1942,24 @@ UILib:CreateKeybind(KeybindsPanel, {
     DefaultKey = Enum.KeyCode.F,
     Callback = function()
         getgenv().AutoLoot = not getgenv().AutoLoot
+        
+        if getgenv().AutoLoot then
+            -- Start Auto Farm loop
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                getgenv().SavedFarmPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+            end
+            
+            local myUID = math.random(1, 1000000)
+            getgenv().AutoLootUID = myUID
+            
+            task.spawn(function()
+                while getgenv().AutoLoot and getgenv().AutoLootUID == myUID do
+                    -- Same auto farm logic from the toggle
+                    task.wait(0.1)
+                end
+            end)
+        end
+        
         UILib:CreateNotification({
             Text = "Auto Farm: " .. (getgenv().AutoLoot and "ON" or "OFF"),
             Duration = 2
@@ -1954,6 +1972,57 @@ UILib:CreateKeybind(KeybindsPanel, {
     DefaultKey = Enum.KeyCode.P,
     Callback = function()
         getgenv().CyberpsychoMode = not getgenv().CyberpsychoMode
+        
+        if getgenv().CyberpsychoMode then
+            -- Start Cyberpsycho loop
+            task.spawn(function()
+                while getgenv().CyberpsychoMode do
+                    local MyChar = LocalPlayer.Character
+                    local MyRoot = MyChar and MyChar:FindFirstChild("HumanoidRootPart")
+                    
+                    if MyRoot then
+                        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+                        local combatRemote = remotes and remotes:FindFirstChild("Combat") and remotes.Combat:FindFirstChild("NetrunnerHack")
+                        
+                        if combatRemote then
+                            -- Get all targets
+                            local allTargets = {}
+                            if workspace:FindFirstChild("Characters") then
+                                for _, char in ipairs(workspace.Characters:GetChildren()) do
+                                    if char ~= MyChar and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                                        table.insert(allTargets, char)
+                                    end
+                                end
+                            end
+                            
+                            for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                                if player ~= LocalPlayer and player.Character then
+                                    local char = player.Character
+                                    if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                                        table.insert(allTargets, char)
+                                    end
+                                end
+                            end
+                            
+                            -- Hack all targets
+                            local hacks = {"PLACE-MARKER", "CREDIT-LIFT", "BLINDSHOT", "SHORT-CIRCUIT"}
+                            for _, targetChar in ipairs(allTargets) do
+                                local hum = targetChar:FindFirstChild("Humanoid")
+                                if hum and hum.Health > 0 then
+                                    local randomHack = hacks[math.random(1, #hacks)]
+                                    combatRemote:FireServer(randomHack, targetChar)
+                                end
+                            end
+                            
+                            -- Execute SELF-SABOTAGE
+                            combatRemote:FireServer("SELF-SABOTAGE", MyChar)
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+        
         UILib:CreateNotification({
             Text = "Cyberpsycho: " .. (getgenv().CyberpsychoMode and "ON" or "OFF"),
             Duration = 2,
@@ -1967,6 +2036,26 @@ UILib:CreateKeybind(KeybindsPanel, {
     DefaultKey = Enum.KeyCode.G,
     Callback = function()
         getgenv().InfStamina = not getgenv().InfStamina
+        
+        if getgenv().InfStamina then
+            -- Start Infinite Stamina loop
+            task.spawn(function()
+                while getgenv().InfStamina do
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Values") and LocalPlayer.Character.Values:FindFirstChild("Stamina") then
+                        local args = {
+                            LocalPlayer.Character.Values.Stamina,
+                            100
+                        }
+                        local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+                        if remotes and remotes:FindFirstChild("Stamina") then
+                            remotes.Stamina:FireServer(unpack(args))
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        end
+        
         UILib:CreateNotification({
             Text = "Infinite Stamina: " .. (getgenv().InfStamina and "ON" or "OFF"),
             Duration = 2
