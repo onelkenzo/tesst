@@ -1346,6 +1346,46 @@ UILib:CreateToggle(CombatPanel, {
     end
 })
 
+-- Auto-Revive Toggle
+UILib:CreateToggle(CombatPanel, {
+    Label = "Auto-Revive",
+    Default = false,
+    Callback = function(state)
+        getgenv().AutoRevive = state
+        
+        if state then
+            task.spawn(function()
+                while getgenv().AutoRevive do
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                        local hum = LocalPlayer.Character.Humanoid
+                        
+                        -- When HP reaches 0 or is very low (downed state)
+                        if hum.Health <= 0 or hum.Health < 5 then
+                            local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+                            if remotes and remotes:FindFirstChild("QuickItem") then
+                                local healItem = getgenv().HealItemName or "Health Inhaler"
+                                
+                                -- Spam heal to revive
+                                for i = 1, 10 do
+                                    remotes.QuickItem:FireServer(healItem)
+                                    task.wait(0.05)
+                                end
+                                
+                                UILib:CreateNotification({Text = "Auto-Revive activated!", Duration = 2, Color = UILib.Colors.SUCCESS})
+                                task.wait(2) -- Cooldown before next attempt
+                            end
+                        end
+                    end
+                   task.wait(0.1)
+                end
+            end)
+            UILib:CreateNotification({Text = "Auto-Revive Enabled", Duration = 2})
+        else
+            UILib:CreateNotification({Text = "Auto-Revive Disabled", Duration = 2})
+        end
+    end
+})
+
 UILib:CreateButton(CombatPanel, {
     Text = "Auto-Detect Heal Item",
     Callback = function()
