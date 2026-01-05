@@ -1889,5 +1889,70 @@ UILib:CreateButton(SettingsPanel, {
     end
 })
 
+-- ========================================
+-- Keybinds Panel
+-- ========================================
+local KeybindsPanel = Window:CreatePanel({
+    Name = "Keybinds",
+    DisplayName = "Keybinds"
+})
+
+UILib:CreateKeybind(KeybindsPanel, {
+    ActionName = "Toggle Auto Farm",
+    DefaultKey = Enum.KeyCode.F,
+    Callback = function()
+        getgenv().AutoLoot = not getgenv().AutoLoot
+        UILib:CreateNotification({
+            Text = "Auto Farm: " .. (getgenv().AutoLoot and "ON" or "OFF"),
+            Duration = 2
+        })
+    end
+})
+
+UILib:CreateKeybind(KeybindsPanel, {
+    ActionName = "Toggle Cyberpsycho",
+    DefaultKey = Enum.KeyCode.P,
+    Callback = function()
+        getgenv().CyberpsychoMode = not getgenv().CyberpsychoMode
+        UILib:CreateNotification({
+            Text = "Cyberpsycho: " .. (getgenv().CyberpsychoMode and "ON" or "OFF"),
+            Duration = 2,
+            Color = getgenv().CyberpsychoMode and UILib.Colors.ERROR or UILib.Colors.SUCCESS
+        })
+    end
+})
+
+UILib:CreateKeybind(KeybindsPanel, {
+    ActionName = "Toggle Infinite Stamina",
+    DefaultKey = Enum.KeyCode.G,
+    Callback = function()
+        getgenv().InfStamina = not getgenv().InfStamina
+        UILib:CreateNotification({
+            Text = "Infinite Stamina: " .. (getgenv().InfStamina and "ON" or "OFF"),
+            Duration = 2
+        })
+    end
+})
+
+UILib:CreateKeybind(KeybindsPanel, {
+    ActionName = "TP to Crate",
+    DefaultKey = Enum.KeyCode.T,
+    Callback = function()
+        local cratesFolder = Workspace:FindFirstChild("Crates") and Workspace.Crates:FindFirstChild("AccessoryCrates")
+        if cratesFolder then
+            for _, crate in ipairs(cratesFolder:GetChildren()) do
+                if crate.Name == "AccessoryCrate" and crate:FindFirstChild("colorable") then
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = crate.colorable.CFrame + Vector3.new(0, 5, 0)
+                        UILib:CreateNotification({Text = "Teleported to Crate!", Duration = 2})
+                        return
+                    end
+                end
+            end
+        end
+        UILib:CreateNotification({Text = "No crates found!", Duration = 2, Color = UILib.Colors.ERROR})
+    end
+})
+
 -- Show default panel
 Window:ShowPanel("Automation")
