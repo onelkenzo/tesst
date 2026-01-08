@@ -78,6 +78,93 @@ UILib.Colors = {
 }
 
 -- =====================================================
+-- CONFIG SYSTEM (Auto-save/load toggle states)
+-- =====================================================
+UILib.ConfigFileName = nil -- Set this when creating a window
+UILib.ToggleCallbacks = {} -- Stores callbacks for auto-activation
+
+function UILib:InitConfig(configFileName)
+    self.ConfigFileName = configFileName or "UILibConfig.json"
+    
+    -- Initialize global config and callbacks
+    if not getgenv().Config then
+        getgenv().Config = {}
+        print("[UILib Config] Initialized empty config")
+    end
+    
+    if not getgenv().ToggleCallbacks then
+        getgenv().ToggleCallbacks = {}
+    end
+    
+    self.ToggleCallbacks = getgenv().ToggleCallbacks
+end
+
+function UILib:SaveConfig()
+    if not self.ConfigFileName then return end
+    
+    local HttpService = game:GetService("HttpService")
+    local success, err = pcall(function()
+        local json = HttpService:JSONEncode(getgenv().Config)
+        writefile(self.ConfigFileName, json)
+    end)
+    
+    if success then
+        print("[UILib Config] Saved to", self.ConfigFileName)
+    else
+        warn("[UILib Config] Save failed:", err)
+    end
+end
+
+function UILib:LoadConfig()
+    if not self.ConfigFileName then return false end
+    
+    local HttpService = game:GetService("HttpService")
+    
+    if isfile and isfile(self.ConfigFileName) then
+        local success, result = pcall(function()
+            local json = readfile(self.ConfigFileName)
+            return HttpService:JSONDecode(json)
+        end)
+        
+        if success and result then
+            -- Merge loaded config with existing defaults
+            for key, value in pairs(result) do
+                if getgenv().Config[key] ~= nil then
+                    getgenv().Config[key] = value
+                end
+            end
+            print("[UILib Config] Loaded from", self.ConfigFileName)
+            return true
+        end
+    end
+    
+    print("[UILib Config] Using defaults (no saved config)")
+    return false
+end
+
+function UILib:AutoActivateToggles()
+    task.spawn(function()
+        task.wait(0.5) -- Wait for all toggles to be created
+        
+        if not getgenv().Config or not getgenv().ToggleCallbacks then
+            warn("[UILib Config] Cannot auto-activate - Config or ToggleCallbacks missing")
+            return
+        end
+        
+        print("[UILib Config] Auto-activating saved toggles...")
+        
+        for toggleName, callback in pairs(getgenv().ToggleCallbacks) do
+            local configValue = getgenv().Config[toggleName]
+            if configValue == true and callback then
+                callback(true)
+                print("[UILib Config] ✅", toggleName, "activated")
+            end
+        end
+    end)
+end
+
+
+-- =====================================================
 -- KEYBINDING SYSTEM
 -- =====================================================
 UILib.Keybinds = {} -- Storage for all keybinds: {ActionName = {Key = Enum.KeyCode, Callback = function}}
@@ -621,9 +708,20 @@ end
 function UILib:CreateToggle(panel, config)
     config = config or {}
     local labelText = config.Label or "Toggle"
+    local configKey = config.ConfigKey or labelText -- Use Label as config key if not specified
     local initialState = config.Default or false
-    local callback = config.Callback or function() end
+    local userCallback = config.Callback or function() end
     local y = panel.ContentY
+
+    -- If config system is enabled, load the saved state
+    if self.ConfigFileName and getgenv().Config then
+        if getgenv().Config[configKey] ~= nil then
+            initialState = getgenv().Config[configKey]
+        else
+            -- Initialize config key with default value
+            getgenv().Config[configKey] = initialState
+        end
+    end
 
     local label = Instance.new("TextLabel", panel.ScrollingFrame)
     label.Size = UDim2.new(1, -150, 0, 45)
@@ -699,6 +797,23 @@ function UILib:CreateToggle(panel, config)
     local state = initialState
     local accumulatedRotation = 0
     local isAnimating = false
+    
+    -- Create wrapped callback that handles config saving
+    local wrappedCallback = function(s)
+        -- Save to config if enabled
+        if self.ConfigFileName and getgenv().Config then
+            getgenv().Config[configKey] = s
+            self:SaveConfig()
+        end
+        
+        -- Call user callback
+        userCallback(s)
+    end
+    
+    -- Store callback for auto-activation
+    if self.ConfigFileName and getgenv().ToggleCallbacks then
+        getgenv().ToggleCallbacks[configKey] = wrappedCallback
+    end
 
     local function toggle()
         if isAnimating then return state end
@@ -741,7 +856,7 @@ function UILib:CreateToggle(panel, config)
             end
         end)
 
-        callback(state)
+        wrappedCallback(state)
         return state
     end
 

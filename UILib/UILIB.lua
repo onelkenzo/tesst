@@ -82,12 +82,53 @@ UILib.Colors = {
 -- =====================================================
 UILib.Keybinds = {} -- Storage for all keybinds: {ActionName = {Key = Enum.KeyCode, Callback = function}}
 UILib.KeybindListener = nil -- Global listener connection
+UILib.ListeningForKeybind = false -- Flag to prevent triggering during rebind
+UILib.KeybindStorageFile = "UILib_Keybinds.json" -- File to save keybinds
 
 -- Helper: Convert KeyCode to readable name
 function UILib:GetKeyName(keyCode)
     if not keyCode then return "None" end
     local name = tostring(keyCode):gsub("Enum.KeyCode.", "")
     return name
+end
+
+-- Helper: Save keybinds to file
+function UILib:SaveKeybinds()
+    if not writefile then return end -- Executor doesn't support file writing
+    
+    local saveData = {}
+    for actionName, keybind in pairs(self.Keybinds) do
+        if keybind.Key then
+            saveData[actionName] = tostring(keybind.Key)
+        end
+    end
+    
+    local success, err = pcall(function()
+        writefile(self.KeybindStorageFile, game:GetService("HttpService"):JSONEncode(saveData))
+    end)
+    
+    if not success then
+        warn("Failed to save keybinds:", err)
+    end
+end
+
+-- Helper: Load keybinds from file
+function UILib:LoadKeybinds()
+    if not readfile or not isfile then return {} end
+    
+    if not isfile(self.KeybindStorageFile) then return {} end
+    
+    local success, result = pcall(function()
+        local data = readfile(self.KeybindStorageFile)
+        return game:GetService("HttpService"):JSONDecode(data)
+    end)
+    
+    if success and type(result) == "table" then
+        return result
+    else
+        warn("Failed to load keybinds:", result)
+        return {}
+    end
 end
 
 -- Helper: Start global keybind listener
@@ -1145,6 +1186,15 @@ function UILib:CreateKeybind(panel, config)
     -- Start the global listener if not already started
     self:StartKeybindListener()
     
+    -- Load saved keybinds
+    local savedKeybinds = self:LoadKeybinds()
+    local savedKey = savedKeybinds[actionName]
+    if savedKey then
+        -- Convert string back to KeyCode
+        local keyCodeStr = savedKey:gsub("Enum.KeyCode.", "")
+        defaultKey = Enum.KeyCode[keyCodeStr]
+    end
+    
     -- Register keybind
     self.Keybinds[actionName] = {
         Key = defaultKey,
@@ -1224,6 +1274,9 @@ function UILib:CreateKeybind(panel, config)
         keybindText.Text = "..."
         keybindText.TextColor3 = self.Colors.JPUFF_PINK
         
+        -- Small delay to ensure flag is set before accepting input
+        task.wait(0.1)
+        
         -- Wait for key press
         local connection
         connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -1238,11 +1291,13 @@ function UILib:CreateKeybind(panel, config)
                 self.Keybinds[actionName].Key = nil
                 keybindText.Text = "None"
                 keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+                self:SaveKeybinds() -- Save after unbind
             else
-                -- Set new key
+                -- Set new key (DO NOT trigger callback here!)
                 self.Keybinds[actionName].Key = input.KeyCode
                 keybindText.Text = self:GetKeyName(input.KeyCode)
                 keybindText.TextColor3 = self.Colors.TEXT_SECONDARY
+                self:SaveKeybinds() -- Save after binding
             end
         end)
     end)
